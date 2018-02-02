@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="changeset-map" default="dist" basedir=".">
+    <property name="commit.message" value="changeset-map plugin"/>
+    <property name="plugin.main.version" value="13140"/>
+    <property name="plugin.version" value="v0.0.1"/>
+    <property name="plugin.author" value="Rub21"/>
+    <property name="plugin.class" value="org.openstreetmap.josm.plugins.changeset.ChangesetMapPlugin"/>
+    <property name="plugin.description" value="Display what object was changed in a changeset"/>
+    <property name="plugin.icon" value="images/changeset-map.png"/>
+    <property name="plugin.link" value="https://github.com/JOSM/changeset-map"/>
+    <property name="plugin.requires" value="geojson"/>
+    <property name="plugin.canloadatruntime" value="true"/>
+    <import file="../build-common.xml"/>
+    <fileset id="plugin.requires.jars" dir="${plugin.dist.dir}">
+    </fileset>
+</project>
