@@ -24,11 +24,15 @@ import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
-import org.openstreetmap.josm.plugins.changeset.bean.DataSetBuilder.BoundedDataSet;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
 import org.openstreetmap.josm.plugins.changeset.util.Util;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
+/**
+ *
+ * @author ruben
+ */
 public class ChangesetLayer extends Layer implements ActionListener {
 
     BoundedDataSet dataSet;
@@ -68,7 +72,6 @@ public class ChangesetLayer extends Layer implements ActionListener {
         if (data == null) {
             return;
         }
-
         //Print the objetcs
         g.setColor(new Color(254, 30, 123));
         g.setStroke(new BasicStroke((float) 2f));
@@ -111,8 +114,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
                         g.setColor(new Color(229, 228, 61));
                     }
                     Point pnt = mv.getPoint(node.getCoor());
-//                    g.clipRect(pnt.x - 20, pnt.y, 4, 4);
-                    g.drawOval(pnt.x - 20, pnt.y - 20, 40, 40);
+                    g.fillOval(pnt.x, pnt.y, 10, 10);
                 }
             }
         }

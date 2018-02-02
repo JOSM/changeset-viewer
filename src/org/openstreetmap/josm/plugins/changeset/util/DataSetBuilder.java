@@ -1,4 +1,4 @@
-package org.openstreetmap.josm.plugins.changeset.bean;
+package org.openstreetmap.josm.plugins.changeset.util;
 
 import java.io.StringReader;
 import java.util.ArrayList;

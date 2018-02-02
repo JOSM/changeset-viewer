@@ -1,14 +1,10 @@
 
-package org.openstreetmap.josm.plugins.changeset.controller;
+package org.openstreetmap.josm.plugins.changeset.util;
 
-import org.openstreetmap.josm.plugins.changeset.util.Util;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openstreetmap.josm.plugins.changeset.bean.DataSetBuilder;
-import org.openstreetmap.josm.plugins.changeset.bean.DataSetBuilder.BoundedDataSet;
-import org.openstreetmap.josm.plugins.changeset.util.Config;
-import org.openstreetmap.josm.plugins.changeset.util.Request;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
 
 /**
  *

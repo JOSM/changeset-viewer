@@ -2,7 +2,7 @@ package org.openstreetmap.josm.plugins.changeset;
 
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
 import org.openstreetmap.josm.gui.MainApplication;
-import org.openstreetmap.josm.plugins.changeset.bean.DataSetBuilder.BoundedDataSet;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
 
 /**
  *
