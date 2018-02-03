@@ -13,11 +13,10 @@ import org.openstreetmap.josm.tools.Logging;
 public class Changeset {
 
     MapView mv = null;
-    ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset:<id>"));
 
     public void work(BoundedDataSetChangestes data, String changesetId) {
         try {
-            tofixLayer.setName(tr("Changeset: " + changesetId));
+            ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset: " + changesetId));
             ChangesetDraw.draw(tofixLayer, data);
         } catch (final Exception e) {
             Logging.error("Error while reading json file!");

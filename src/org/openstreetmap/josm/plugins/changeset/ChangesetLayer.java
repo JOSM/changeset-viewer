@@ -25,7 +25,6 @@ import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
-import org.openstreetmap.josm.plugins.changeset.util.Util;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
@@ -113,7 +112,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
                         g.setColor(new Color(229, 228, 61));
                     }
                     Point pnt = mv.getPoint(node.getCoor());
-                    g.fillOval(pnt.x, pnt.y, 10, 10);
+                    g.fillOval(pnt.x, pnt.y, 8, 8);
                 }
             }
         }
