@@ -38,19 +38,18 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     MapView mv = MainApplication.getMap().mapView;
     JPanel jContentPanel = new JPanel(new GridLayout(1, 1));
     JPanel jPanelProjects = new JPanel(new GridLayout(3, 1));
-    JButton jButtonGetChangesets = new JButton(tr("Get chengeset in the Area"));
+    JButton jButtonGetChangesets = new JButton(tr("Get changeset in the area"));
     private final SideButton getChangesetButton;
     private final JTextField jTextFieldChangesetId;
     ChangesetController changesetController = new ChangesetController();
     Changeset Changeset = new Changeset();
     ListCellRenderer renderer = new CellRenderer();
-
     JComboBox jComboBox = new JComboBox();
 
     public ChangesetDialog() {
         super(tr("Changeset-map"), "changeset", tr("Open changeset-map window."),
                 Shortcut.registerShortcut("Tool:Changeset-map", tr("Toggle: {0}", tr("Tool:Changeset-map")),
-                        KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 80);
+                        KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 100);
         jPanelProjects.add(jButtonGetChangesets);
         jButtonGetChangesets.addActionListener((ActionEvent e) -> {
             //Get area

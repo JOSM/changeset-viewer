@@ -9,11 +9,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.util.List;
-
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JOptionPane;
-
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.osm.DataSet;
 import org.openstreetmap.josm.data.osm.Node;
@@ -36,7 +34,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
 
     BoundedDataSetChangestes dataSet;
 
-//    DataSet dataset;
+    //DataSet dataset;
     float width;
 
     public ChangesetLayer(String name) {

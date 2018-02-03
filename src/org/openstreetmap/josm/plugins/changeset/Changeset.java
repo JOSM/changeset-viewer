@@ -1,7 +1,5 @@
 package org.openstreetmap.josm.plugins.changeset;
 
-import org.openstreetmap.josm.gui.MapView;
-import org.openstreetmap.josm.gui.io.UploadDialog;
 import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
 import org.openstreetmap.josm.tools.Logging;
@@ -12,8 +10,6 @@ import org.openstreetmap.josm.tools.Logging;
  */
 public class Changeset {
 
-    MapView mv = null;
-
     public void work(BoundedDataSetChangestes data, String changesetId) {
         try {
             ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset: " + changesetId));
@@ -22,7 +18,6 @@ public class Changeset {
             Logging.error("Error while reading json file!");
             Logging.error(e);
         }
-        UploadDialog.getUploadDialog().getChangeset().getCommentsCount();
     }
 
 }

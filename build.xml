@@ -8,7 +8,6 @@
     <property name="plugin.description" value="Display what object was changed in a changeset"/>
     <property name="plugin.icon" value="images/changeset-map.png"/>
     <property name="plugin.link" value="https://github.com/JOSM/changeset-map"/>
-    <property name="plugin.requires" value="geojson"/>
     <property name="plugin.canloadatruntime" value="true"/>
     <import file="../build-common.xml"/>
     <fileset id="plugin.requires.jars" dir="${plugin.dist.dir}">
