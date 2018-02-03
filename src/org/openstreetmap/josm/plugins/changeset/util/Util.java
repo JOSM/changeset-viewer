@@ -12,7 +12,7 @@ public class Util {
         JOptionPane.showMessageDialog(null, object);
     }
 
-    public static void print(Object object) {
-        System.err.println(object);
-    }
+//    public static void print(Object object) {
+//        System.err.println(object);
+//    }
 }

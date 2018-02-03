@@ -24,16 +24,16 @@ import org.openstreetmap.josm.data.osm.Way;
  * @author ruben modified from :
  * https://github.com/JOSM/geojson/blob/master/src/main/java/org/openstreetmap/josm/plugins/geojson/DataSetBuilder.java
  */
-public class DataSetBuilder {
+public class DataSetBuilderChangesets {
 
     public static final int MAX_LINK_LENGTH = 102400;
 
-    public static class BoundedDataSet {
+    public static class BoundedDataSetChangestes {
 
         private final DataSet dataSet;
         private final Bounds bounds;
 
-        public BoundedDataSet(final DataSet dataSet, final Bounds bounds) {
+        public BoundedDataSetChangestes(final DataSet dataSet, final Bounds bounds) {
             this.dataSet = dataSet;
             this.bounds = bounds;
         }
@@ -49,7 +49,7 @@ public class DataSetBuilder {
 
     private DataSet dataSet;
 
-    public BoundedDataSet build(final String dataString) {
+    public BoundedDataSetChangestes build(final String dataString) {
         dataSet = new DataSet();
 
         JsonReader reader = Json.createReader(new StringReader(dataString));
@@ -106,7 +106,7 @@ public class DataSetBuilder {
         for (OsmPrimitive osmPrimitive : dataSet.allPrimitives()) {
             bounds = mergeBounds(bounds, osmPrimitive);
         }
-        return new BoundedDataSet(dataSet, bounds);
+        return new BoundedDataSetChangestes(dataSet, bounds);
     }
 
     private void processPoint(final JsonObject tags, final LatLon latLon, final String action) {

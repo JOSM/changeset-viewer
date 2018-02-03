@@ -10,13 +10,16 @@ import org.openstreetmap.josm.tools.HttpClient.Response;
  * @author ruben
  */
 public class Request {
-   
+
     public static String sendGET(String url) throws IOException {
-        Util.print("sendGET => :" + url);
+        System.out.println(url);
         Response response = HttpClient.create(new URL(url))
                 .setAccept("application/json")
                 .connect();
-        String result = response.fetchContent();
+        String result = null;
+        if (response.getResponseCode() == 200) {
+            result = response.fetchContent();
+        }
         response.disconnect();
         return result;
     }

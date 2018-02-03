@@ -2,7 +2,7 @@ package org.openstreetmap.josm.plugins.changeset;
 
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
 import org.openstreetmap.josm.gui.MainApplication;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
 
 /**
  *
@@ -10,7 +10,7 @@ import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataS
  */
 public class ChangesetDraw {
 
-    public static void draw(final ChangesetLayer tofixNewLayer, BoundedDataSet data) {
+    public static void draw(final ChangesetLayer tofixNewLayer, BoundedDataSetChangestes data) {
         if (data == null) {
             return;
         }

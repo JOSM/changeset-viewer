@@ -24,7 +24,7 @@ import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
 import org.openstreetmap.josm.plugins.changeset.util.Util;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
@@ -35,7 +35,7 @@ import org.openstreetmap.josm.tools.ImageProvider;
  */
 public class ChangesetLayer extends Layer implements ActionListener {
 
-    BoundedDataSet dataSet;
+    BoundedDataSetChangestes dataSet;
 
 //    DataSet dataset;
     float width;
@@ -59,7 +59,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
         return false;
     }
 
-    public void setDataSet(BoundedDataSet dataSet) {
+    public void setDataSet(BoundedDataSetChangestes dataSet) {
         this.dataSet = dataSet;
         invalidate();
     }
@@ -67,7 +67,6 @@ public class ChangesetLayer extends Layer implements ActionListener {
     @Override
     public void paint(Graphics2D g, final MapView mv, Bounds bounds) {
         DataSet data = dataSet.getDataSet();
-        Util.print(data.allPrimitives());
         Stroke stroke = g.getStroke();
         if (data == null) {
             return;

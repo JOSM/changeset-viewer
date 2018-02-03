@@ -1,27 +1,75 @@
-
 package org.openstreetmap.josm.plugins.changeset.util;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilder.BoundedDataSet;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonValue;
+import javax.json.stream.JsonParsingException;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
 
 /**
  *
  * @author ruben
  */
 public class ChangesetController {
-    public BoundedDataSet getChangeset(String changesetId) {
-        DataSetBuilder builder = new DataSetBuilder();
+    
+    public BoundedDataSetChangestes getChangeset(String changesetId) {
+        DataSetBuilderChangesets builder = new DataSetBuilderChangesets();
         try {
-            String url=Config.HOST + changesetId + ".json";
-            Util.print(url);
+            String url = Config.HOST + changesetId + ".json";
             String stringChangeset = Request.sendGET(url);
-            Util.print(stringChangeset);
-            return builder.build(stringChangeset);
+            if (stringChangeset == null) {
+                return null;
+            } else {
+                return builder.build(stringChangeset);
+            }
         } catch (IOException ex) {
             Logger.getLogger(ChangesetController.class.getName()).log(Level.SEVERE, null, ex);
             return null;
+        }
+    }
+    
+    public Object[] getListChangeset() {
+        Object[] changesets = new Object[75];
+        try {
+            String stringChangesets = Request.sendGET(Config.getHost());
+            if (stringChangesets == null) {
+                return changesets;
+            } else {
+                try (JsonReader jsonReader = Json.createReader(new StringReader(stringChangesets))) {
+                    JsonObject jsonObject = jsonReader.readObject();
+                    JsonArray jsonArray = jsonObject.getJsonArray("features");
+                    int i = 0;
+                    for (Iterator<JsonValue> it = jsonArray.iterator(); it.hasNext();) {
+                        JsonValue value = it.next();
+                        try (JsonReader jsonReader2 = Json.createReader(new StringReader(value.toString()))) {
+                            ChangesetBeen changesetBeen = new ChangesetBeen();
+                            JsonObject jsonChangeset = jsonReader2.readObject();
+                            changesetBeen.setChangesetId(jsonChangeset.getInt("id"));
+                            JsonObject properties = jsonChangeset.getJsonObject("properties");
+                            changesetBeen.setUser(properties.getString("user"));
+                            changesetBeen.setDelete(properties.getInt("delete"));
+                            changesetBeen.setCreate(properties.getInt("create"));
+                            changesetBeen.setModify(properties.getInt("modify"));
+                            changesetBeen.setDate(properties.getString("date"));
+                            changesets[i] = changesetBeen;
+                            i++;
+                        }
+                    }
+                    return changesets;
+                } catch (NullPointerException | JsonParsingException ex) {
+                    return changesets;
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(ChangesetController.class.getName()).log(Level.SEVERE, null, ex);
+            return changesets;
         }
     }
 }
