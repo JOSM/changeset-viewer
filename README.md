@@ -1,5 +1,7 @@
 # Changeset Plugin
 
+*(Still fixing some bugs)*
+
 A version of https://osmlab.github.io/changeset-map for JOSM
 
 Example:
