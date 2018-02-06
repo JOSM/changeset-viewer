@@ -60,44 +60,47 @@ public class DataSetBuilderChangesets {
             String action = obj.getString("action");
             String type = obj.getString("type");
             JsonObject tags = obj.getJsonObject("tags");
+            //DELETE
             if (action.equals("delete") && type.equals("node") && !obj.isNull("old")) {
                 JsonObject old = obj.getJsonObject("old");
-                Double lat = Double.parseDouble(old.getString("lat"));
-                Double lon = Double.parseDouble(old.getString("lon"));
-                LatLon latLon = new LatLon(lat, lon);
-                processPoint(tags, latLon, action);
+                processPoint(tags, old, action);
             } else if (action.equals("delete") && type.equals("way") && !obj.isNull("old")) {
                 JsonObject old = obj.getJsonObject("old");
-                JsonArray arrayNodes = old.getJsonArray("nodes");
-                processLineString(tags, arrayNodes, action);
-            } else if (action.equals("create") && type.equals("node")) {
-                Double lat = Double.parseDouble(obj.getString("lat"));
-                Double lon = Double.parseDouble(obj.getString("lon"));
-                LatLon latLon = new LatLon(lat, lon);
-                processPoint(tags, latLon, action);
+                processLineString(tags, old, action);
+            } //CREATE
+            else if (action.equals("create") && type.equals("node")) {
+                processPoint(tags, obj, action);
             } else if (action.equals("create") && type.equals("way")) {
-                JsonArray arrayNodes = obj.getJsonArray("nodes");
-                processLineString(tags, arrayNodes, action);
-            } else if (action.equals("modify") && type.equals("way")) {
+                processLineString(tags, obj, action);
+            } //MODIFY
+            else if (action.equals("modify") && type.equals("way")) {
                 //NEW
-                JsonArray arrayNodesNew = obj.getJsonArray("nodes");
-                processLineString(tags, arrayNodesNew, "modify-new");
+                processLineString(tags, obj, "modify-new");
                 //OLD
                 JsonObject old = obj.getJsonObject("old");
-                JsonArray arrayNodesOld = obj.getJsonArray("nodes");
-                processLineString(tags, arrayNodesOld, "modify-old");
+                processLineString(tags, old, "modify-old");
             } else if (action.equals("modify") && type.equals("node")) {
                 //NEW
-                Double latNew = Double.parseDouble(obj.getString("lat"));
-                Double lonNew = Double.parseDouble(obj.getString("lon"));
-                LatLon latLonNew = new LatLon(latNew, lonNew);
-                processPoint(tags, latLonNew, "modify-new");
+                processPoint(tags, obj, "modify-new");
                 //OLD
                 JsonObject old = obj.getJsonObject("old");
-                Double latOld = Double.parseDouble(old.getString("lat"));
-                Double lonOld = Double.parseDouble(old.getString("lon"));
-                LatLon latLonOld = new LatLon(latOld, lonOld);
-                processPoint(tags, latLonOld, "modify-old");
+                processPoint(tags, old, "modify-old");
+                //RELATION
+            } else if (action.equals("modify") && type.equals("relation")) {
+                //OLD
+                JsonObject old = obj.getJsonObject("old");
+                Bounds boundsRelationOld = buildRelation(tags, old, "modify-old-rel");
+                bounds2rectangle(tags, boundsRelationOld, "modify-old-rel");
+                //NEW
+                Bounds boundsRelationNew = buildRelation(tags, obj, "modify-new-rel");
+                bounds2rectangle(tags, boundsRelationNew, "modify-new-rel");
+            } else if (action.equals("create") && type.equals("relation")) {
+                Bounds boundsRelationNew = buildRelation(tags, obj, "create-rel");
+                bounds2rectangle(tags, boundsRelationNew, "create-rel");
+            } else if (action.equals("delete") && type.equals("relation")) {
+                JsonObject old = obj.getJsonObject("old");
+                Bounds boundsRelationNew = buildRelation(tags, old, "delete-rel");
+                bounds2rectangle(tags, boundsRelationNew, "delete-rel");
             }
         }
 
@@ -108,12 +111,16 @@ public class DataSetBuilderChangesets {
         return new BoundedDataSetChangestes(dataSet, bounds);
     }
 
-    private void processPoint(final JsonObject tags, final LatLon latLon, final String action) {
+    private void processPoint(final JsonObject tags, final JsonObject nodeJson, final String action) {
+        Double lat = Double.parseDouble(nodeJson.getString("lat"));
+        Double lon = Double.parseDouble(nodeJson.getString("lon"));
+        LatLon latLon = new LatLon(lat, lon);
         final Node node = createNode(latLon);
         fillTagsFromFeature(tags, node, action);
     }
 
-    private void processLineString(final JsonObject tags, final JsonArray arrayNodes, final String action) {
+    private void processLineString(final JsonObject tags, final JsonObject wayJson, final String action) {
+        JsonArray arrayNodes = wayJson.getJsonArray("nodes");
         if (arrayNodes.isEmpty()) {
             return;
         }
@@ -127,7 +134,6 @@ public class DataSetBuilderChangesets {
         }
 
         final Way way = createWay(coordinates);
-
         fillTagsFromFeature(tags, way, action);
     }
 
@@ -188,4 +194,85 @@ public class DataSetBuilderChangesets {
         }
     }
 
+    private Bounds getBoundsRelation(final Bounds bounds, final OsmPrimitive osmPrimitive) {
+        if (osmPrimitive instanceof Node) {
+            return mergeBounds(bounds, ((Node) osmPrimitive).getCoor());
+        }
+        return bounds;
+    }
+
+    private void bounds2rectangle(final JsonObject tags, final Bounds bounds, final String action) {
+        Double minLat = bounds.getMinLat();
+        Double minLon = bounds.getMinLon();
+        Double maxLat = bounds.getMaxLat();
+        Double maxLon = bounds.getMaxLon();
+        List<Node> nodes = new ArrayList<>(4);
+        Node n1 = new Node(new LatLon(minLat, minLon));
+        dataSet.addPrimitive(n1);
+        nodes.add(n1);
+        Node n2 = new Node(new LatLon(minLat, maxLon));
+        dataSet.addPrimitive(n2);
+        nodes.add(n2);
+        Node n3 = new Node(new LatLon(maxLat, maxLon));
+        dataSet.addPrimitive(n3);
+        nodes.add(n3);
+        Node n4 = new Node(new LatLon(maxLat, minLon));
+        dataSet.addPrimitive(n4);
+        nodes.add(n4);
+        Node n5 = new Node(new LatLon(minLat, minLon));
+        dataSet.addPrimitive(n5);
+        nodes.add(n5);
+        Way way = new Way();
+        way.setNodes(nodes);
+        fillTagsFromFeature(tags, way, action);
+        dataSet.addPrimitive(way);
+    }
+
+    private Bounds buildRelation(final JsonObject tags, final JsonObject obj, final String action) {
+        DataSet dataSetRel = new DataSet();
+        //OLD
+        JsonArray members = obj.getJsonArray("members");
+        for (int j = 0; j < members.size(); j++) {
+            JsonObject member = members.getJsonObject(j);
+            if (member.getString("type").equals("way")) {
+//                processLineString(tags, member, action + "-rel");
+                dataSetRel.addPrimitive(processRelationLineString(tags, member, dataSetRel));
+            } else if (member.getString("type").equals("node")) {
+//                processPoint(tags, member, action + "-rel");
+                dataSetRel.addPrimitive(processRelationPoint(tags, member));
+            }
+        }
+        Bounds boundsRelationOld = null;
+        for (OsmPrimitive osmPrimitive : dataSetRel.allPrimitives()) {
+            boundsRelationOld = mergeBounds(boundsRelationOld, osmPrimitive);
+        }
+        return boundsRelationOld;
+    }
+
+    private Node processRelationPoint(final JsonObject tags, final JsonObject nodeJson) {
+        Double lat = Double.parseDouble(nodeJson.getString("lat"));
+        Double lon = Double.parseDouble(nodeJson.getString("lon"));
+        LatLon latLon = new LatLon(lat, lon);
+        Node node = new Node(latLon);
+        return node;
+    }
+
+    private Way processRelationLineString(final JsonObject tags, final JsonObject wayJson, DataSet dataSetOld) {
+        JsonArray arrayNodes = wayJson.getJsonArray("nodes");
+        Way way = new Way();
+        if (arrayNodes.isEmpty()) {
+            return way;
+        }
+        List<Node> nodes = new ArrayList<>(arrayNodes.size());
+        for (int i = 0; i < arrayNodes.size(); i++) {
+            Double lat = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lat"));
+            Double lon = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lon"));
+            LatLon latLon = new LatLon(lat, lon);
+            Node node = new Node(latLon);
+            dataSetOld.addPrimitive(node);
+            nodes.add(node);
+        }
+        way.setNodes(nodes);
+        return way;
+    }
 }

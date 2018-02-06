@@ -66,7 +66,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
         });
         jComboBox.addActionListener(this);
         jPanelProjects.add(jComboBox);
-        jTextFieldChangesetId = new JTextField("55982280");
+        jTextFieldChangesetId = new JTextField("55006771");
         jPanelProjects.add(jTextFieldChangesetId);
         jContentPanel.add(jPanelProjects);
         getChangesetButton = new SideButton(new AbstractAction() {

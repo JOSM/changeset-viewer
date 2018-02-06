@@ -23,6 +23,7 @@ import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
+import org.openstreetmap.josm.plugins.changeset.util.Util;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
@@ -69,12 +70,13 @@ public class ChangesetLayer extends Layer implements ActionListener {
             return;
         }
         //Print the objetcs
-        g.setColor(new Color(254, 30, 123));
-        g.setStroke(new BasicStroke((float) 2f));
+        final float dash1[] = {10.0f};
+
         for (OsmPrimitive primitive : data.allPrimitives()) {
+//            g.setColor(new Color(254, 30, 123));
+            g.setStroke(new BasicStroke((float) 2f));
             if (primitive instanceof Way) {
                 Way way = (Way) primitive;
-
                 if (way.getInterestingTags().get("action").equals("create")) {
                     g.setColor(new Color(50, 214, 184));
                 } else if (way.getInterestingTags().get("action").equals("delete")) {
@@ -83,8 +85,31 @@ public class ChangesetLayer extends Layer implements ActionListener {
                     g.setColor(new Color(214, 138, 13));
                 } else if (way.getInterestingTags().get("action").equals("modify-new")) {
                     g.setColor(new Color(229, 228, 61));
+                } else if (way.getInterestingTags().get("action").equals("modify-new-rel")) {
+                    g.setColor(new Color(229, 228, 61));
+                    g.setStroke(new BasicStroke(1.0f,
+                            BasicStroke.CAP_BUTT,
+                            BasicStroke.CAP_ROUND,
+                            10.0f, dash1, 0.0f));
+                } else if (way.getInterestingTags().get("action").equals("modify-old-rel")) {
+                    g.setColor(new Color(214, 138, 13));
+                    g.setStroke(new BasicStroke(1.0f,
+                            BasicStroke.CAP_BUTT,
+                            BasicStroke.CAP_ROUND,
+                            10.0f, dash1, 0.0f));
+                } else if (way.getInterestingTags().get("action").equals("create-rel")) {
+                    g.setColor(new Color(50, 214, 184));
+                    g.setStroke(new BasicStroke(1.0f,
+                            BasicStroke.CAP_BUTT,
+                            BasicStroke.CAP_ROUND,
+                            10.0f, dash1, 0.0f));
+                }else if (way.getInterestingTags().get("action").equals("delete-rel")) {
+                    g.setColor(new Color(50, 214, 184));
+                    g.setStroke(new BasicStroke(1.0f,
+                            BasicStroke.CAP_BUTT,
+                            BasicStroke.CAP_ROUND,
+                            10.0f, dash1, 0.0f));
                 }
-
                 List<Node> nodes = way.getNodes();
                 if (nodes.size() < 2) {
                     return;
@@ -109,8 +134,9 @@ public class ChangesetLayer extends Layer implements ActionListener {
                     } else if (node.getInterestingTags().get("action").equals("modify-new")) {
                         g.setColor(new Color(229, 228, 61));
                     }
+
                     Point pnt = mv.getPoint(node.getCoor());
-                    g.fillOval(pnt.x, pnt.y, 8, 8);
+                    g.fillOval(pnt.x, pnt.y, 7, 7);
                 }
             }
         }
@@ -145,4 +171,5 @@ public class ChangesetLayer extends Layer implements ActionListener {
     public void mergeFrom(Layer layer) {
 
     }
+
 }
