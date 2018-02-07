@@ -154,18 +154,13 @@ public class DataSetBuilderChangesets {
             return null;
         }
         final Way way = new Way();
-
         final List<Node> nodes = new ArrayList<>(coordinates.size());
-
         for (final LatLon point : coordinates) {
             final Node node = createNode(point);
-
             nodes.add(node);
         }
         way.setNodes(nodes);
-
         dataSet.addPrimitive(way);
-
         return way;
     }
 

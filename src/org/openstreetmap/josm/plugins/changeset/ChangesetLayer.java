@@ -23,7 +23,6 @@ import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
-import org.openstreetmap.josm.plugins.changeset.util.Util;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
@@ -104,7 +103,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
                             BasicStroke.CAP_ROUND,
                             10.0f, dash1, 0.0f));
                 }else if (way.getInterestingTags().get("action").equals("delete-rel")) {
-                    g.setColor(new Color(50, 214, 184));
+                    g.setColor(new Color(197, 38, 63));
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
                             BasicStroke.CAP_ROUND,
