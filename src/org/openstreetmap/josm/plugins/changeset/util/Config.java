@@ -10,7 +10,6 @@ public class Config {
     public static final String HOST = "https://s3.amazonaws.com/mapbox/real-changesets/production/";
     public static final String CHANGESET_MAP = "https://osmlab.github.io/changeset-map/";
     public static final String OSMCHANGESET = "https://www.openstreetmap.org/changeset/";
-
     private static int PAGE = 1;
     private static String PAGE_SIZE = "page_size=75";
     private static String BBOX = "none";

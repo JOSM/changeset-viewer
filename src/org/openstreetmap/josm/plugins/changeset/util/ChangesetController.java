@@ -11,7 +11,7 @@ import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
 import javax.json.stream.JsonParsingException;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 
 /**
  *
@@ -19,8 +19,8 @@ import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.Bo
  */
 public class ChangesetController {
     
-    public BoundedDataSetChangestes getChangeset(String changesetId) {
-        DataSetBuilderChangesets builder = new DataSetBuilderChangesets();
+    public BoundedChangesetDataSet getChangeset(String changesetId) {
+        DataSetChangesetBuilder builder = new DataSetChangesetBuilder();
         try {
             String url = Config.HOST + changesetId + ".json";
             String stringChangeset = Request.sendGET(url);

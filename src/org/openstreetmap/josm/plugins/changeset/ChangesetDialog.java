@@ -27,7 +27,7 @@ import org.openstreetmap.josm.plugins.changeset.util.ChangesetBeen;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetController;
 import org.openstreetmap.josm.plugins.changeset.util.CellRenderer;
 import org.openstreetmap.josm.plugins.changeset.util.Config;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 import org.openstreetmap.josm.tools.ImageProvider;
 import org.openstreetmap.josm.tools.OpenBrowser;
 import org.openstreetmap.josm.tools.Shortcut;
@@ -55,8 +55,8 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     private boolean flag = true;
 
     public ChangesetDialog() {
-        super(tr("Changeset Viewer"), "changeset", tr("Open Changeset Viewer window."),
-                Shortcut.registerShortcut("Tool:changeset-viewer", tr("Toggle: {0}", tr("Tool:Changeset-Viewer")),
+        super(tr("Changeset viewer"), "changeset", tr("Open changeset Viewer window."),
+                Shortcut.registerShortcut("Tool:changeset-viewer", tr("Toggle: {0}", tr("Tool:changeset-Viewer")),
                         KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 100);
         c.fill = GridBagConstraints.FIRST_LINE_START;
         c.gridx = 0;
@@ -145,7 +145,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     }
 
     public void printMap(String ChangesetId) {
-        BoundedDataSetChangestes boundedDataSet = changesetController.getChangeset(ChangesetId);
+        BoundedChangesetDataSet boundedDataSet = changesetController.getChangeset(ChangesetId);
         if (boundedDataSet == null) {
             JOptionPane.showMessageDialog(Main.parent, tr("Check the right changeset Id, if it is ok, maybe the changeset was not processed yet, try again in few minutes!"));
         } else {

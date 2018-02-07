@@ -30,7 +30,7 @@ public class CellRenderer implements ListCellRenderer {
             ChangesetBeen changesetBeen = (ChangesetBeen) value;
             JLabel jLabelDate = new JLabel(changesetBeen.getDate(), SwingConstants.CENTER);
             jLabelDate.setForeground(new Color(0, 174, 255));
-//            JLabel jLabelChangesetId = new JLabel(String.valueOf(changesetBeen.getChangesetId()));
+//          JLabel jLabelChangesetId = new JLabel(String.valueOf(changesetBeen.getChangesetId()));
             jPanelChangeset.setBorder(BorderFactory.createTitledBorder("Changeset :" + String.valueOf(changesetBeen.getChangesetId())));
             JLabel jLabelUser = new JLabel(changesetBeen.getUser(), SwingConstants.CENTER);
             JLabel jLabelCreate = new JLabel(String.valueOf(changesetBeen.getCreate()), SwingConstants.CENTER);
@@ -42,7 +42,7 @@ public class CellRenderer implements ListCellRenderer {
             JLabel jLabelDelete = new JLabel(String.valueOf(changesetBeen.getDelete()), SwingConstants.CENTER);
             jLabelDelete.setForeground(new Color(197, 38, 63));
             jLabelDelete.setFont(new Font("Serif", Font.BOLD, 12));
-//            jPanelRow.add(jLabelChangesetId);
+//          jPanelRow.add(jLabelChangesetId);
             jPanelRow.add(jLabelUser);
             jPanelNumChanges.add(jLabelCreate);
             jPanelNumChanges.add(jLabelModify);

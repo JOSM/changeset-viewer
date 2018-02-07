@@ -22,7 +22,7 @@ import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
@@ -32,7 +32,7 @@ import org.openstreetmap.josm.tools.ImageProvider;
  */
 public class ChangesetLayer extends Layer implements ActionListener {
 
-    BoundedDataSetChangestes dataSet;
+    BoundedChangesetDataSet dataSet;
 
     //DataSet dataset;
     float width;
@@ -56,7 +56,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
         return false;
     }
 
-    public void setDataSet(BoundedDataSetChangestes dataSet) {
+    public void setDataSet(BoundedChangesetDataSet dataSet) {
         this.dataSet = dataSet;
         invalidate();
     }
@@ -70,7 +70,6 @@ public class ChangesetLayer extends Layer implements ActionListener {
         }
         //Print the objetcs
         final float dash1[] = {10.0f};
-
         for (OsmPrimitive primitive : data.allPrimitives()) {
 //            g.setColor(new Color(254, 30, 123));
             g.setStroke(new BasicStroke((float) 2f));
@@ -122,7 +121,6 @@ public class ChangesetLayer extends Layer implements ActionListener {
                 }
             } else if (primitive instanceof Node) {
                 Node node = (Node) primitive;
-
                 if (node.getParentWays().isEmpty()) {
                     if (node.getInterestingTags().get("action").equals("create")) {
                         g.setColor(new Color(50, 214, 184));

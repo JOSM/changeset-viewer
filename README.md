@@ -1,13 +1,14 @@
 # Changeset Plugin
 
+Changeset Viewer plugin allows you to visualize the changesets in JOSM background!
+
+![changeset-viewer](https://user-images.githubusercontent.com/1152236/35937653-deae6742-0c14-11e8-84a0-d65039afac45.gif)
+
 This plugin allows you to see what the changes were in a certain place, you can list the changes by zones. 
 
-The web version is [OSMCHA](https://osmcha.mapbox.com/), but since I am a fan of doing things fast in JOSM, I have implemented this plugin to see the changes that happened and do the mapping.
+This plugin is using the [OSMCHA API](https://osmcha.mapbox.com/) and [Changeset-Map API](https://github.com/osmlab/changeset-map).
 
 
-## Supported objects
+## Legend
 
-Nodes, Ways (Relations in progress)
-
-
-![32](https://user-images.githubusercontent.com/1152236/35761508-5b9a4670-0857-11e8-9c00-f0aa672f7089.gif)
+![screen shot 2018-02-07 at 3 35 53 pm](https://user-images.githubusercontent.com/1152236/35940490-5e217c64-0c1d-11e8-96d8-3098d6414a9a.png)

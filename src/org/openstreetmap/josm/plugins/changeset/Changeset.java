@@ -1,7 +1,7 @@
 package org.openstreetmap.josm.plugins.changeset;
 
 import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
-import org.openstreetmap.josm.plugins.changeset.util.DataSetBuilderChangesets.BoundedDataSetChangestes;
+import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 import org.openstreetmap.josm.tools.Logging;
 
 /**
@@ -10,7 +10,7 @@ import org.openstreetmap.josm.tools.Logging;
  */
 public class Changeset {
 
-    public void work(BoundedDataSetChangestes data, String changesetId) {
+    public void work(BoundedChangesetDataSet data, String changesetId) {
         try {
             ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset: " + changesetId));
             ChangesetDraw.draw(tofixLayer, data);

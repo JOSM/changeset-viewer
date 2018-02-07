@@ -20,19 +20,18 @@ import org.openstreetmap.josm.data.osm.Way;
 
 /**
  *
- * @author ruben modified from :
- * https://github.com/JOSM/geojson/blob/master/src/main/java/org/openstreetmap/josm/plugins/geojson/DataSetBuilder.java
+ * @author ruben
  */
-public class DataSetBuilderChangesets {
+public class DataSetChangesetBuilder {
 
     public static final int MAX_LINK_LENGTH = 102400;
 
-    public static class BoundedDataSetChangestes {
+    public static class BoundedChangesetDataSet {
 
         private final DataSet dataSet;
         private final Bounds bounds;
 
-        public BoundedDataSetChangestes(final DataSet dataSet, final Bounds bounds) {
+        public BoundedChangesetDataSet(final DataSet dataSet, final Bounds bounds) {
             this.dataSet = dataSet;
             this.bounds = bounds;
         }
@@ -48,13 +47,11 @@ public class DataSetBuilderChangesets {
 
     private DataSet dataSet;
 
-    public BoundedDataSetChangestes build(final String dataString) {
+    public BoundedChangesetDataSet build(final String dataString) {
         dataSet = new DataSet();
-
         JsonReader reader = Json.createReader(new StringReader(dataString));
         JsonObject jsonObject = reader.readObject();
         JsonArray array = jsonObject.getJsonArray("elements");
-
         for (int i = 0; i < array.size(); i++) {
             JsonObject obj = array.get(i).asJsonObject();
             String action = obj.getString("action");
@@ -108,7 +105,7 @@ public class DataSetBuilderChangesets {
         for (OsmPrimitive osmPrimitive : dataSet.allPrimitives()) {
             bounds = mergeBounds(bounds, osmPrimitive);
         }
-        return new BoundedDataSetChangestes(dataSet, bounds);
+        return new BoundedChangesetDataSet(dataSet, bounds);
     }
 
     private void processPoint(final JsonObject tags, final JsonObject nodeJson, final String action) {

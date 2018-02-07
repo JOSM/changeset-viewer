@@ -9,9 +9,9 @@ import org.openstreetmap.josm.plugins.PluginInformation;
  *
  * @author ruben
  */
-public class ChangesetMapPlugin extends Plugin {
+public class ChangesetViewerPlugin extends Plugin {
 
-    public ChangesetMapPlugin(PluginInformation info) {
+    public ChangesetViewerPlugin(PluginInformation info) {
         super(info);
     }
 
