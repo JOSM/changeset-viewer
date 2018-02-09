@@ -1,8 +1,10 @@
 package org.openstreetmap.josm.plugins.changeset;
 
+import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -10,6 +12,7 @@ import java.util.Arrays;
 import javax.swing.AbstractAction;
 import static javax.swing.Action.NAME;
 import static javax.swing.Action.SHORT_DESCRIPTION;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
@@ -40,11 +43,12 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
 
     private MapView mv = MainApplication.getMap().mapView;
     private final JPanel jContentPanel = new JPanel(new GridLayout(1, 1));
-    private final JPanel jPanelProjects = new JPanel(new GridLayout(3, 1));
-    private final JPanel jPanelButtons = new JPanel(new GridBagLayout());
-    private final GridBagConstraints c = new GridBagConstraints();
+    private final JPanel jPanelProjects = new JPanel(new GridLayout(4, 1));
+//    private final JPanel jPanelButtons = new JPanel(new GridLayout(3, 1));
+    private final JPanel jPanelOptions = new JPanel(new GridLayout(1, 2));
     private final JButton jButtonGetChangesets = new JButton(tr("Get changeset in the area"));
-    private final JButton jButtonNext = new JButton(tr("->"));
+    private final JButton jButtonNext = new JButton(tr("Next ->"));
+    private final JButton jButtonprevious = new JButton(tr("<- Previous"));
     private final SideButton displayChangesetButton;
     private final SideButton OpenChangesetweb;
     private final JTextField jTextFieldChangesetId;
@@ -57,17 +61,13 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     public ChangesetDialog() {
         super(tr("Changeset viewer"), "changeset", tr("Open changeset Viewer window."),
                 Shortcut.registerShortcut("Tool:changeset-viewer", tr("Toggle: {0}", tr("Tool:changeset-Viewer")),
-                        KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 100);
-        c.fill = GridBagConstraints.FIRST_LINE_START;
-        c.gridx = 0;
-        c.gridy = 0;
-        jPanelButtons.add(jButtonGetChangesets, c);
-        c.fill = GridBagConstraints.CENTER;
-        c.gridx = 1;
-        c.gridy = 0;
-        jPanelButtons.add(jButtonNext, c);
+                        KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 120);
+
+        jPanelProjects.setBorder(BorderFactory.createTitledBorder(""));
+        jPanelProjects.add(jButtonGetChangesets);
+        jButtonprevious.setEnabled(false);
         jButtonNext.setEnabled(false);
-        jPanelProjects.add(jPanelButtons);
+
         jButtonGetChangesets.addActionListener((ActionEvent e) -> {
             flag = false;
             Config.setPAGE(1);
@@ -79,7 +79,16 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
             jButtonNext.setEnabled(true);
         });
 
+        jButtonprevious.addActionListener((ActionEvent e) -> {
+            flag = false;
+            if (Config.getPAGE() > 1) {
+                Config.setPAGE(Config.getPAGE() - 1);
+                getChangesets();
+            }
+        });
+
         jButtonNext.addActionListener((ActionEvent e) -> {
+            jButtonprevious.setEnabled(true);
             flag = false;
             Config.setPAGE(Config.getPAGE() + 1);
             getChangesets();
@@ -87,7 +96,10 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
 
         jComboBox.addActionListener(this);
         jPanelProjects.add(jComboBox);
-        jTextFieldChangesetId = new JTextField("56126761");
+        jPanelOptions.add(jButtonprevious);
+        jPanelOptions.add(jButtonNext);
+        jPanelProjects.add(jPanelOptions);
+        jTextFieldChangesetId = new JTextField("55006771");
         jPanelProjects.add(jTextFieldChangesetId);
         jContentPanel.add(jPanelProjects);
         displayChangesetButton = new SideButton(new AbstractAction() {
