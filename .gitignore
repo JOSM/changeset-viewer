@@ -4,3 +4,4 @@ nbproject/
 build/
 *.class
 *.log
+/bin/

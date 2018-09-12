@@ -35,8 +35,8 @@ public class ChangesetController {
         }
     }
     
-    public Object[] getListChangeset() {
-        Object[] changesets = new Object[75];
+    public ChangesetBeen[] getListChangeset() {
+        ChangesetBeen[] changesets = new ChangesetBeen[75];
         try {
             String stringChangesets = Request.sendGET(Config.getHost());
             if (stringChangesets == null) {

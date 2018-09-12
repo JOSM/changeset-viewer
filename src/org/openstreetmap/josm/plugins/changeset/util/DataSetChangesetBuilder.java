@@ -186,13 +186,6 @@ public class DataSetChangesetBuilder {
         }
     }
 
-    private Bounds getBoundsRelation(final Bounds bounds, final OsmPrimitive osmPrimitive) {
-        if (osmPrimitive instanceof Node) {
-            return mergeBounds(bounds, ((Node) osmPrimitive).getCoor());
-        }
-        return bounds;
-    }
-
     private void bounds2rectangle(final JsonObject tags, final Bounds bounds, final String action) {
         Double minLat = bounds.getMinLat();
         Double minLon = bounds.getMinLon();

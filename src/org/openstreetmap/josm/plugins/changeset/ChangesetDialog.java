@@ -1,17 +1,14 @@
 package org.openstreetmap.josm.plugins.changeset;
 
-import java.awt.BorderLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
+
 import java.awt.GridLayout;
-import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
+
 import javax.swing.AbstractAction;
-import static javax.swing.Action.NAME;
-import static javax.swing.Action.SHORT_DESCRIPTION;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -19,16 +16,15 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.ListCellRenderer;
-import org.openstreetmap.josm.Main;
+
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.SideButton;
 import org.openstreetmap.josm.gui.dialogs.ToggleDialog;
-import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
+import org.openstreetmap.josm.plugins.changeset.util.CellRenderer;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetBeen;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetController;
-import org.openstreetmap.josm.plugins.changeset.util.CellRenderer;
 import org.openstreetmap.josm.plugins.changeset.util.Config;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 import org.openstreetmap.josm.tools.ImageProvider;
@@ -54,8 +50,8 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     private final JTextField jTextFieldChangesetId;
     private final ChangesetController changesetController = new ChangesetController();
     Changeset Changeset = new Changeset();
-    private final ListCellRenderer renderer = new CellRenderer();
-    private final JComboBox jComboBox = new JComboBox();
+    private final ListCellRenderer<ChangesetBeen> renderer = new CellRenderer();
+    private final JComboBox<ChangesetBeen> jComboBox = new JComboBox<>();
     private boolean flag = true;
 
     public ChangesetDialog() {
@@ -114,7 +110,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
                 if (!jTextFieldChangesetId.getText().isEmpty()) {
                     printMap(jTextFieldChangesetId.getText());
                 } else {
-                    JOptionPane.showMessageDialog(Main.parent, tr("Fill a changeset id!"));
+                    JOptionPane.showMessageDialog(MainApplication.getMainFrame(), tr("Fill a changeset id!"));
                 }
             }
         });
@@ -130,11 +126,11 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
                 if (!jTextFieldChangesetId.getText().isEmpty()) {
                     OpenBrowser.displayUrl(Config.OSMCHANGESET + jTextFieldChangesetId.getText());
                 } else {
-                    JOptionPane.showMessageDialog(Main.parent, tr("Fill a changeset id!"));
+                    JOptionPane.showMessageDialog(MainApplication.getMainFrame(), tr("Fill a changeset id!"));
                 }
             }
         });
-        createLayout(jContentPanel, false, Arrays.asList(new SideButton[]{displayChangesetButton, OpenChangesetweb}));
+        createLayout(jContentPanel, false, Arrays.asList(displayChangesetButton, OpenChangesetweb));
     }
 
     @Override
@@ -149,8 +145,8 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
 
     private void getChangesets() {
         jComboBox.removeAllItems();
-        Object[] elements = changesetController.getListChangeset();
-        for (Object element : elements) {
+        ChangesetBeen[] elements = changesetController.getListChangeset();
+        for (ChangesetBeen element : elements) {
             jComboBox.addItem(element);
         }
         jComboBox.setRenderer(renderer);
@@ -159,7 +155,8 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     public void printMap(String ChangesetId) {
         BoundedChangesetDataSet boundedDataSet = changesetController.getChangeset(ChangesetId);
         if (boundedDataSet == null) {
-            JOptionPane.showMessageDialog(Main.parent, tr("Check the right changeset Id, if it is ok, maybe the changeset was not processed yet, try again in few minutes!"));
+            JOptionPane.showMessageDialog(MainApplication.getMainFrame(), 
+                    tr("Check the right changeset Id, if it is ok, maybe the changeset was not processed yet, try again in few minutes!"));
         } else {
             Changeset.work(boundedDataSet, ChangesetId);;
         }
