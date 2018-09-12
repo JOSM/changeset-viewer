@@ -5,3 +5,4 @@ build/
 *.class
 *.log
 /bin/
+/javadoc/
