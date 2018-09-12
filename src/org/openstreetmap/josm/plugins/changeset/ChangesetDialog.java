@@ -49,7 +49,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     private final SideButton OpenChangesetweb;
     private final JTextField jTextFieldChangesetId;
     private final ChangesetController changesetController = new ChangesetController();
-    Changeset Changeset = new Changeset();
+    Changeset changeset = new Changeset();
     private final ListCellRenderer<ChangesetBeen> renderer = new CellRenderer();
     private final JComboBox<ChangesetBeen> jComboBox = new JComboBox<>();
     private boolean flag = true;
@@ -158,7 +158,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
             JOptionPane.showMessageDialog(MainApplication.getMainFrame(), 
                     tr("Check the right changeset Id, if it is ok, maybe the changeset was not processed yet, try again in few minutes!"));
         } else {
-            Changeset.work(boundedDataSet, ChangesetId);;
+            changeset.work(boundedDataSet, ChangesetId);;
         }
     }
 }
