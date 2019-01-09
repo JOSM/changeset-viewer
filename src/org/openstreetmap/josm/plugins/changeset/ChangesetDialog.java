@@ -1,6 +1,6 @@
 package org.openstreetmap.josm.plugins.changeset;
 
-import static org.openstreetmap.josm.gui.mappaint.mapcss.ExpressionFactory.Functions.tr;
+import static org.openstreetmap.josm.tools.I18n.tr;
 
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
