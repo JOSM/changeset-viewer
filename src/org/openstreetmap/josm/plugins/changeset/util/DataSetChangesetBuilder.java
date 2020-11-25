@@ -6,17 +6,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.json.JsonString;
 import javax.json.JsonValue;
+
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.coor.LatLon;
 import org.openstreetmap.josm.data.osm.DataSet;
 import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Way;
+import org.openstreetmap.josm.tools.Logging;
 
 /**
  *
@@ -109,10 +114,7 @@ public class DataSetChangesetBuilder {
     }
 
     private void processPoint(final JsonObject tags, final JsonObject nodeJson, final String action) {
-        Double lat = Double.parseDouble(nodeJson.getString("lat"));
-        Double lon = Double.parseDouble(nodeJson.getString("lon"));
-        LatLon latLon = new LatLon(lat, lon);
-        final Node node = createNode(latLon);
+        final Node node = createNode(newLatLon(nodeJson));
         fillTagsFromFeature(tags, node, action);
     }
 
@@ -124,10 +126,7 @@ public class DataSetChangesetBuilder {
 
         List<LatLon> coordinates = new LinkedList<>();
         for (int i = 0; i < arrayNodes.size(); i++) {
-            Double lat = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lat"));
-            Double lon = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lon"));
-            LatLon latLon = new LatLon(lat, lon);
-            coordinates.add(latLon);
+            coordinates.add(newLatLon(arrayNodes.getJsonObject(i)));
         }
 
         final Way way = createWay(coordinates);
@@ -151,12 +150,7 @@ public class DataSetChangesetBuilder {
             return null;
         }
         final Way way = new Way();
-        final List<Node> nodes = new ArrayList<>(coordinates.size());
-        for (final LatLon point : coordinates) {
-            final Node node = createNode(point);
-            nodes.add(node);
-        }
-        way.setNodes(nodes);
+        way.setNodes(coordinates.stream().map(this::createNode).collect(Collectors.toList()));
         dataSet.addPrimitive(way);
         return way;
     }
@@ -215,16 +209,14 @@ public class DataSetChangesetBuilder {
 
     private Bounds buildRelation(final JsonObject tags, final JsonObject obj, final String action) {
         DataSet dataSetRel = new DataSet();
-        //OLD
         JsonArray members = obj.getJsonArray("members");
         for (int j = 0; j < members.size(); j++) {
             JsonObject member = members.getJsonObject(j);
-            if (member.getString("type").equals("way")) {
-//                processLineString(tags, member, action + "-rel");
-                dataSetRel.addPrimitive(processRelationLineString(tags, member, dataSetRel));
-            } else if (member.getString("type").equals("node")) {
-//                processPoint(tags, member, action + "-rel");
-                dataSetRel.addPrimitive(processRelationPoint(tags, member));
+            String memberType = member.getString("type");
+            if ("way".equals(memberType)) {
+                dataSetRel.addPrimitive(processRelationLineString(member, dataSetRel));
+            } else if ("node".equals(memberType)) {
+                dataSetRel.addPrimitive(newNode(member));
             }
         }
         Bounds boundsRelationOld = null;
@@ -234,15 +226,23 @@ public class DataSetChangesetBuilder {
         return boundsRelationOld;
     }
 
-    private Node processRelationPoint(final JsonObject tags, final JsonObject nodeJson) {
-        Double lat = Double.parseDouble(nodeJson.getString("lat"));
-        Double lon = Double.parseDouble(nodeJson.getString("lon"));
-        LatLon latLon = new LatLon(lat, lon);
-        Node node = new Node(latLon);
-        return node;
+    private static LatLon newLatLon(final JsonObject json) {
+        JsonString latString = json.getJsonString("lat");
+        JsonString lonString = json.getJsonString("lon");
+        if (latString == null || lonString == null) {
+            Logging.error("Invalid JSON: " + json);
+            return null;
+        }
+        return new LatLon(
+                Double.parseDouble(latString.getString()),
+                Double.parseDouble(lonString.getString()));
     }
 
-    private Way processRelationLineString(final JsonObject tags, final JsonObject wayJson, DataSet dataSetOld) {
+    private static Node newNode(final JsonObject nodeJson) {
+        return new Node(newLatLon(nodeJson));
+    }
+
+    private static Way processRelationLineString(final JsonObject wayJson, DataSet dataSetOld) {
         JsonArray arrayNodes = wayJson.getJsonArray("nodes");
         Way way = new Way();
         if (arrayNodes.isEmpty()) {
@@ -250,10 +250,7 @@ public class DataSetChangesetBuilder {
         }
         List<Node> nodes = new ArrayList<>(arrayNodes.size());
         for (int i = 0; i < arrayNodes.size(); i++) {
-            Double lat = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lat"));
-            Double lon = Double.parseDouble(arrayNodes.getJsonObject(i).getString("lon"));
-            LatLon latLon = new LatLon(lat, lon);
-            Node node = new Node(latLon);
+            Node node = newNode(arrayNodes.getJsonObject(i));
             dataSetOld.addPrimitive(node);
             nodes.add(node);
         }
