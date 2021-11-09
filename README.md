@@ -16,4 +16,4 @@ Look at the screenshot below 👇
 ![Legend](https://user-images.githubusercontent.com/1152236/35940490-5e217c64-0c1d-11e8-96d8-3098d6414a9a.png) 
 
 
-This plugin utilizes [OSMCHa](https://osmcha.mapbox.com/) and [Changeset-Map](https://github.com/osmlab/changeset-map) APIs capabilities.
+This plugin utilizes [OSMCha](https://osmcha.org/) and [Changeset-Map](https://github.com/osmlab/changeset-map) APIs capabilities.
