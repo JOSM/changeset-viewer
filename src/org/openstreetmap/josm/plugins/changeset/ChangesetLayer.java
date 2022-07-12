@@ -115,8 +115,8 @@ public class ChangesetLayer extends Layer implements ActionListener {
                 for (int i = 0; i <= way.getNodes().size() - 2; i++) {
                     Node node1 = way.getNode(i);
                     Node node2 = way.getNode(i + 1);
-                    Point pnt1 = mv.getPoint(node1.getCoor());
-                    Point pnt2 = mv.getPoint(node2.getCoor());
+                    Point pnt1 = mv.getPoint(node1);
+                    Point pnt2 = mv.getPoint(node2);
                     g.draw(new Line2D.Double(pnt1.x, pnt1.y, pnt2.x, pnt2.y));
                 }
             } else if (primitive instanceof Node) {
@@ -132,7 +132,7 @@ public class ChangesetLayer extends Layer implements ActionListener {
                         g.setColor(new Color(229, 228, 61));
                     }
 
-                    Point pnt = mv.getPoint(node.getCoor());
+                    Point pnt = mv.getPoint(node);
                     g.fillOval(pnt.x, pnt.y, 7, 7);
                 }
             }
