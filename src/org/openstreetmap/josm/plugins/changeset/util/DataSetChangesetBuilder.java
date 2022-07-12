@@ -16,6 +16,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import org.openstreetmap.josm.data.Bounds;
+import org.openstreetmap.josm.data.coor.ILatLon;
 import org.openstreetmap.josm.data.coor.LatLon;
 import org.openstreetmap.josm.data.osm.DataSet;
 import org.openstreetmap.josm.data.osm.Node;
@@ -164,18 +165,19 @@ public class DataSetChangesetBuilder {
         return mapTags;
     }
 
-    private Bounds mergeBounds(final Bounds bounds, final OsmPrimitive osmPrimitive) {
-        if (osmPrimitive instanceof Node) { // ways and relations consist of nodes that are already in the dataset
-            return mergeBounds(bounds, ((Node) osmPrimitive).getCoor());
+    private static Bounds mergeBounds(final Bounds bounds, final OsmPrimitive osmPrimitive) {
+        // ways and relations consist of nodes that are already in the dataset
+        if (osmPrimitive instanceof Node && ((Node) osmPrimitive).isLatLonKnown()) {
+            return mergeBounds(bounds, ((ILatLon) osmPrimitive));
         }
         return bounds;
     }
 
-    private Bounds mergeBounds(final Bounds bounds, final LatLon coords) {
+    private static Bounds mergeBounds(final Bounds bounds, final ILatLon coords) {
         if (bounds == null) {
-            return new Bounds(coords);
+            return new Bounds(coords.lat(), coords.lon(), coords.lat(), coords.lon());
         } else {
-            bounds.extend(coords);
+            bounds.extend(coords.lat(), coords.lon());
             return bounds;
         }
     }
