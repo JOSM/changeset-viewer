@@ -1,49 +1,55 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
 /**
- *
+ * A class storing config values
  * @author ruben
  */
-public class Config {
+public final class Config {
+    private Config() {
+        // Hide constructor
+    }
 
-    public static final String OSMCHA_HOST = "https://osmcha.org/api/v1/changesets/?";
+    public static final String OSMCHA_HOST = "https://osmcha.org/";
+    public static final String OSMCHA_HOST_API = OSMCHA_HOST + "api/v1/";
+    public static final String OSMCHA_HOST_CHANGESETS = OSMCHA_HOST_API + "changesets/?";
     public static final String HOST = "https://s3.amazonaws.com/mapbox/real-changesets/production/";
     public static final String CHANGESET_MAP = "https://osmlab.github.io/changeset-map/";
     public static final String OSMCHANGESET = "https://www.openstreetmap.org/changeset/";
-    private static int PAGE = 1;
-    private static String PAGE_SIZE = "page_size=75";
-    private static String BBOX = "none";
-    private static String AREA_LT = "area_lt=1";
+    private static int page = 1;
+    private static String pageSize = "page_size=75";
+    private static String bbox = "none";
+    private static final String areaLt = "area_lt=1";
 
     public static int getPAGE() {
-        return PAGE;
+        return page;
     }
 
-    public static void setPAGE(int PAGE) {
-        Config.PAGE = PAGE;
+    public static void setPAGE(int page) {
+        Config.page = page;
     }
 
-    public String getPAGE_SIZE() {
-        return PAGE_SIZE;
+    public static String getPAGE_SIZE() {
+        return pageSize;
     }
 
-    public void setPAGE_SIZE(String PAGE_SIZE) {
-        Config.PAGE_SIZE = PAGE_SIZE;
+    public static void setPAGE_SIZE(String pageSize) {
+        Config.pageSize = pageSize;
     }
 
-    public String getBBOX() {
-        return BBOX;
+    public static String getBBOX() {
+        return bbox;
     }
 
-    public static void setBBOX(String BBOX) {
-        Config.BBOX = "in_bbox=" + BBOX;
+    public static void setBBOX(String bbox) {
+        Config.bbox = "in_bbox=" + bbox;
     }
 
     public static String getHost() {
-        if (BBOX.equals("none")) {
-            return OSMCHA_HOST + "page=" + PAGE + "&" + PAGE_SIZE + "&" + AREA_LT;
+        if ("none".equals(bbox)) {
+            return OSMCHA_HOST_CHANGESETS + "page=" + page + "&" + pageSize + "&" + areaLt;
         } else {
-            return OSMCHA_HOST + "page=" + PAGE + "&" + PAGE_SIZE + "&" + BBOX + "&" + AREA_LT;
+            return OSMCHA_HOST_CHANGESETS + "page=" + page + "&" + pageSize + "&" + bbox + "&" + areaLt;
         }
     }
 
