@@ -1,10 +1,11 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
 /**
- *
+ * A record class for changeset metadata
  * @author ruben
  */
-public class ChangesetBeen  {
+public class ChangesetBeen {
 
     String date;
     String user;

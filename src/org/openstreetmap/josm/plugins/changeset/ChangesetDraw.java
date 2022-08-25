@@ -1,3 +1,4 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset;
 
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
@@ -5,11 +6,19 @@ import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 
 /**
- *
+ * Draw changesets
  * @author ruben
  */
-public class ChangesetDraw {
+public final class ChangesetDraw {
+    private ChangesetDraw() {
+        // Hide constructor
+    }
 
+    /**
+     * Draw the changeset
+     * @param tofixNewLayer The layer to draw
+     * @param data The data to draw on the layer
+     */
     public static void draw(final ChangesetLayer tofixNewLayer, BoundedChangesetDataSet data) {
         if (data == null) {
             return;

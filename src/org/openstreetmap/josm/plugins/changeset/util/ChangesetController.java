@@ -1,8 +1,8 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.json.Json;
@@ -12,14 +12,23 @@ import javax.json.JsonReader;
 import javax.json.JsonValue;
 import javax.json.stream.JsonParsingException;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
+import org.openstreetmap.josm.tools.Logging;
 
 /**
- *
+ * Get changesets to show the user and show specific changesets
  * @author ruben
  */
-public class ChangesetController {
-    
-    public BoundedChangesetDataSet getChangeset(String changesetId) {
+public final class ChangesetController {
+    private ChangesetController() {
+        // Hide the constructor
+    }
+
+    /**
+     * Get a changeset
+     * @param changesetId The changeset to get
+     * @return The dataset to show
+     */
+    public static BoundedChangesetDataSet getChangeset(String changesetId) {
         DataSetChangesetBuilder builder = new DataSetChangesetBuilder();
         try {
             String url = Config.HOST + changesetId + ".json";
@@ -34,8 +43,12 @@ public class ChangesetController {
             return null;
         }
     }
-    
-    public ChangesetBeen[] getListChangeset() {
+
+    /**
+     * Get a list of changesets
+     * @return The changeset array
+     */
+    public static ChangesetBeen[] getListChangeset() {
         ChangesetBeen[] changesets = new ChangesetBeen[75];
         try {
             String stringChangesets = Request.sendGET(Config.getHost());
@@ -46,8 +59,7 @@ public class ChangesetController {
                     JsonObject jsonObject = jsonReader.readObject();
                     JsonArray jsonArray = jsonObject.getJsonArray("features");
                     int i = 0;
-                    for (Iterator<JsonValue> it = jsonArray.iterator(); it.hasNext();) {
-                        JsonValue value = it.next();
+                    for (JsonValue value : jsonArray) {
                         try (JsonReader jsonReader2 = Json.createReader(new StringReader(value.toString()))) {
                             ChangesetBeen changesetBeen = new ChangesetBeen();
                             JsonObject jsonChangeset = jsonReader2.readObject();
@@ -64,6 +76,7 @@ public class ChangesetController {
                     }
                     return changesets;
                 } catch (NullPointerException | JsonParsingException ex) {
+                    Logging.error(ex);
                     return changesets;
                 }
             }

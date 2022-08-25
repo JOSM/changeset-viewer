@@ -1,3 +1,4 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
 import java.io.StringReader;
@@ -25,18 +26,24 @@ import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.tools.Logging;
 
 /**
- *
+ * Build the changeset dataset to show the user
  * @author ruben
  */
 public class DataSetChangesetBuilder {
 
-    public static final int MAX_LINK_LENGTH = 102400;
-
+    /**
+     * A bounded changset dataset to show the user
+     */
     public static class BoundedChangesetDataSet {
 
         private final DataSet dataSet;
         private final Bounds bounds;
 
+        /**
+         * Create a new {@link BoundedChangesetDataSet}
+         * @param dataSet The dataset with the changeset data
+         * @param bounds The bounds of the changeset
+         */
         public BoundedChangesetDataSet(final DataSet dataSet, final Bounds bounds) {
             this.dataSet = dataSet;
             this.bounds = bounds;
@@ -53,56 +60,64 @@ public class DataSetChangesetBuilder {
 
     private DataSet dataSet;
 
+    /**
+     * Build the dataset to show the user
+     * @param dataString The json string
+     * @return The dataset
+     */
     public BoundedChangesetDataSet build(final String dataString) {
         dataSet = new DataSet();
-        JsonReader reader = Json.createReader(new StringReader(dataString));
-        JsonObject jsonObject = reader.readObject();
-        JsonArray array = jsonObject.getJsonArray("elements");
-        for (int i = 0; i < array.size(); i++) {
-            JsonObject obj = array.get(i).asJsonObject();
+        try (JsonReader reader = Json.createReader(new StringReader(dataString))) {
+            JsonObject jsonObject = reader.readObject();
+            return build(jsonObject.getJsonArray("elements"));
+        }
+    }
+
+    private BoundedChangesetDataSet build(JsonArray array) {
+        for (JsonObject obj : array.getValuesAs(JsonObject.class)) {
             String action = obj.getString("action");
             String type = obj.getString("type");
             JsonObject tags = obj.getJsonObject("tags");
             //DELETE
-            if (action.equals("delete") && type.equals("node") && !obj.isNull("old")) {
+            if ("delete".equals(action) && "node".equals(type) && !obj.isNull("old")) {
                 JsonObject old = obj.getJsonObject("old");
                 processPoint(tags, old, action);
-            } else if (action.equals("delete") && type.equals("way") && !obj.isNull("old")) {
+            } else if ("delete".equals(action) && "way".equals(type) && !obj.isNull("old")) {
                 JsonObject old = obj.getJsonObject("old");
                 processLineString(tags, old, action);
             } //CREATE
-            else if (action.equals("create") && type.equals("node")) {
+            else if ("create".equals(action) && "node".equals(type)) {
                 processPoint(tags, obj, action);
-            } else if (action.equals("create") && type.equals("way")) {
+            } else if ("create".equals(action) && "way".equals(type)) {
                 processLineString(tags, obj, action);
             } //MODIFY
-            else if (action.equals("modify") && type.equals("way")) {
+            else if ("modify".equals(action) && "way".equals(type)) {
                 //NEW
                 processLineString(tags, obj, "modify-new");
                 //OLD
                 JsonObject old = obj.getJsonObject("old");
                 processLineString(tags, old, "modify-old");
-            } else if (action.equals("modify") && type.equals("node")) {
+            } else if ("modify".equals(action) && "node".equals(type)) {
                 //NEW
                 processPoint(tags, obj, "modify-new");
                 //OLD
                 JsonObject old = obj.getJsonObject("old");
                 processPoint(tags, old, "modify-old");
                 //RELATION
-            } else if (action.equals("modify") && type.equals("relation")) {
+            } else if ("modify".equals(action) && "relation".equals(type)) {
                 //OLD
                 JsonObject old = obj.getJsonObject("old");
-                Bounds boundsRelationOld = buildRelation(tags, old, "modify-old-rel");
+                Bounds boundsRelationOld = buildRelation(old);
                 bounds2rectangle(tags, boundsRelationOld, "modify-old-rel");
                 //NEW
-                Bounds boundsRelationNew = buildRelation(tags, obj, "modify-new-rel");
+                Bounds boundsRelationNew = buildRelation(obj);
                 bounds2rectangle(tags, boundsRelationNew, "modify-new-rel");
-            } else if (action.equals("create") && type.equals("relation")) {
-                Bounds boundsRelationNew = buildRelation(tags, obj, "create-rel");
+            } else if ("create".equals(action) && "relation".equals(type)) {
+                Bounds boundsRelationNew = buildRelation(obj);
                 bounds2rectangle(tags, boundsRelationNew, "create-rel");
-            } else if (action.equals("delete") && type.equals("relation")) {
+            } else if ("delete".equals(action) && "relation".equals(type)) {
                 JsonObject old = obj.getJsonObject("old");
-                Bounds boundsRelationNew = buildRelation(tags, old, "delete-rel");
+                Bounds boundsRelationNew = buildRelation(old);
                 bounds2rectangle(tags, boundsRelationNew, "delete-rel");
             }
         }
@@ -134,7 +149,7 @@ public class DataSetChangesetBuilder {
         fillTagsFromFeature(tags, way, action);
     }
 
-    private void fillTagsFromFeature(final JsonObject tags, final OsmPrimitive primitive, final String action) {
+    private static void fillTagsFromFeature(final JsonObject tags, final OsmPrimitive primitive, final String action) {
         if (tags != null) {
             primitive.setKeys(getTags(tags, action));
         }
@@ -156,7 +171,7 @@ public class DataSetChangesetBuilder {
         return way;
     }
 
-    private Map<String, String> getTags(final JsonObject tags, final String action) {
+    private static Map<String, String> getTags(final JsonObject tags, final String action) {
         final Map<String, String> mapTags = new TreeMap<>();
         mapTags.put("action", action);
         for (Map.Entry<String, JsonValue> entry : tags.entrySet()) {
@@ -183,10 +198,13 @@ public class DataSetChangesetBuilder {
     }
 
     private void bounds2rectangle(final JsonObject tags, final Bounds bounds, final String action) {
-        Double minLat = bounds.getMinLat();
-        Double minLon = bounds.getMinLon();
-        Double maxLat = bounds.getMaxLat();
-        Double maxLon = bounds.getMaxLon();
+        if (bounds == null) {
+            return;
+        }
+        double minLat = bounds.getMinLat();
+        double minLon = bounds.getMinLon();
+        double maxLat = bounds.getMaxLat();
+        double maxLon = bounds.getMaxLon();
         List<Node> nodes = new ArrayList<>(4);
         Node n1 = new Node(new LatLon(minLat, minLon));
         dataSet.addPrimitive(n1);
@@ -209,7 +227,7 @@ public class DataSetChangesetBuilder {
         dataSet.addPrimitive(way);
     }
 
-    private Bounds buildRelation(final JsonObject tags, final JsonObject obj, final String action) {
+    private static Bounds buildRelation(final JsonObject obj) {
         DataSet dataSetRel = new DataSet();
         JsonArray members = obj.getJsonArray("members");
         for (int j = 0; j < members.size(); j++) {

@@ -1,3 +1,4 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset;
 
 import java.awt.BasicStroke;
@@ -27,16 +28,17 @@ import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
 /**
- *
+ * A layer to show what a changeset did
  * @author ruben
  */
 public class ChangesetLayer extends Layer implements ActionListener {
 
     BoundedChangesetDataSet dataSet;
 
-    //DataSet dataset;
-    float width;
-
+    /**
+     * Create a new {@link ChangesetLayer}
+     * @param name The name of the layer
+     */
     public ChangesetLayer(String name) {
         super(name);
     }
@@ -56,6 +58,10 @@ public class ChangesetLayer extends Layer implements ActionListener {
         return false;
     }
 
+    /**
+     * Set the dataset for this layer
+     * @param dataSet The dataset to show the user
+     */
     public void setDataSet(BoundedChangesetDataSet dataSet) {
         this.dataSet = dataSet;
         invalidate();
@@ -68,40 +74,39 @@ public class ChangesetLayer extends Layer implements ActionListener {
         if (data == null) {
             return;
         }
-        //Print the objetcs
-        final float dash1[] = {10.0f};
+        //Print the objects
+        final float[] dash1 = {10.0f};
         for (OsmPrimitive primitive : data.allPrimitives()) {
-//            g.setColor(new Color(254, 30, 123));
-            g.setStroke(new BasicStroke((float) 2f));
+            g.setStroke(new BasicStroke(2f));
             if (primitive instanceof Way) {
                 Way way = (Way) primitive;
-                if (way.getInterestingTags().get("action").equals("create")) {
+                if ("create".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(50, 214, 184));
-                } else if (way.getInterestingTags().get("action").equals("delete")) {
+                } else if ("delete".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(197, 38, 63));
-                } else if (way.getInterestingTags().get("action").equals("modify-old")) {
+                } else if ("modify-old".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(214, 138, 13));
-                } else if (way.getInterestingTags().get("action").equals("modify-new")) {
+                } else if ("modify-new".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(229, 228, 61));
-                } else if (way.getInterestingTags().get("action").equals("modify-new-rel")) {
+                } else if ("modify-new-rel".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(229, 228, 61));
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
                             BasicStroke.CAP_ROUND,
                             10.0f, dash1, 0.0f));
-                } else if (way.getInterestingTags().get("action").equals("modify-old-rel")) {
+                } else if ("modify-old-rel".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(214, 138, 13));
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
                             BasicStroke.CAP_ROUND,
                             10.0f, dash1, 0.0f));
-                } else if (way.getInterestingTags().get("action").equals("create-rel")) {
+                } else if ("create-rel".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(50, 214, 184));
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
                             BasicStroke.CAP_ROUND,
                             10.0f, dash1, 0.0f));
-                }else if (way.getInterestingTags().get("action").equals("delete-rel")) {
+                }else if ("delete-rel".equals(way.getInterestingTags().get("action"))) {
                     g.setColor(new Color(197, 38, 63));
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
@@ -122,13 +127,13 @@ public class ChangesetLayer extends Layer implements ActionListener {
             } else if (primitive instanceof Node) {
                 Node node = (Node) primitive;
                 if (node.getParentWays().isEmpty()) {
-                    if (node.getInterestingTags().get("action").equals("create")) {
+                    if ("create".equals(node.getInterestingTags().get("action"))) {
                         g.setColor(new Color(50, 214, 184));
-                    } else if (node.getInterestingTags().get("action").equals("delete")) {
+                    } else if ("delete".equals(node.getInterestingTags().get("action"))) {
                         g.setColor(new Color(197, 38, 63));
-                    } else if (node.getInterestingTags().get("action").equals("modify-old")) {
+                    } else if ("modify-old".equals(node.getInterestingTags().get("action"))) {
                         g.setColor(new Color(214, 138, 13));
-                    } else if (node.getInterestingTags().get("action").equals("modify-new")) {
+                    } else if ("modify-new".equals(node.getInterestingTags().get("action"))) {
                         g.setColor(new Color(229, 228, 61));
                     }
 

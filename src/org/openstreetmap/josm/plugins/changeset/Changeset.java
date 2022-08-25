@@ -1,24 +1,27 @@
+// License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
-import org.openstreetmap.josm.tools.Logging;
 
 /**
- *
+ * A class to draw a changeset layer
  * @author ruben
  */
-public class Changeset {
+public final class Changeset {
+    private Changeset() {
+        // Hide constructor
+    }
 
-    public void work(BoundedChangesetDataSet data, String changesetId) {
-        try {
-            ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset: " + changesetId));
-            ChangesetDraw.draw(tofixLayer, data);
-        } catch (final Exception e) {
-            Logging.error("Error while reading json file!");
-            Logging.error(e);
-        }
+    /**
+     * Do the work to show the data
+     * @param data The data to show
+     * @param changesetId The changeset id to show
+     */
+    public static void work(BoundedChangesetDataSet data, String changesetId) {
+        ChangesetLayer tofixLayer = new ChangesetLayer(tr("Changeset: {0}", changesetId));
+        ChangesetDraw.draw(tofixLayer, data);
     }
 
 }
