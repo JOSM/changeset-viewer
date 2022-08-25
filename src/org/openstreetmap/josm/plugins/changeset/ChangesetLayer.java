@@ -1,6 +1,9 @@
 // License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset;
 
+import static org.openstreetmap.josm.tools.I18n.marktr;
+import static org.openstreetmap.josm.tools.I18n.tr;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -8,17 +11,15 @@ import java.awt.Point;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.geom.Line2D;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JOptionPane;
+
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.osm.DataSet;
 import org.openstreetmap.josm.data.osm.Node;
-import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
 import org.openstreetmap.josm.data.preferences.CachingProperty;
@@ -28,7 +29,6 @@ import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
 import org.openstreetmap.josm.gui.layer.Layer;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
-import static org.openstreetmap.josm.tools.I18n.tr;
 import org.openstreetmap.josm.tools.ImageProvider;
 
 /**
@@ -37,17 +37,13 @@ import org.openstreetmap.josm.tools.ImageProvider;
  */
 public class ChangesetLayer extends Layer implements ActionListener {
     private static final CachingProperty<Color> DELETED_COLOR = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
-            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Deleted objects"),
-            new Color(197, 38, 63)).cached();
+            marktr("changeset-viewer"), marktr("Deleted objects"), new Color(197, 38, 63)).cached();
     private static final CachingProperty<Color> CREATED_COLOR = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
-            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Created objects"),
-            new Color(50, 214, 184)).cached();
+            marktr("changeset-viewer"), marktr("Created objects"), new Color(50, 214, 184)).cached();
     private static final CachingProperty<Color> MODIFIED_OLD = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
-            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Modified objects (old)"),
-            new Color(214, 138, 13)).cached();
+            marktr("changeset-viewer"), marktr("Modified objects (old)"), new Color(214, 138, 13)).cached();
     private static final CachingProperty<Color> MODIFIED_NEW = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
-            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Modified objects (new)"),
-            new Color(229, 228, 61)).cached();
+            marktr("changeset-viewer"), marktr("Modified objects (new)"), new Color(229, 228, 61)).cached();
 
     BoundedChangesetDataSet dataSet;
 
@@ -92,74 +88,111 @@ public class ChangesetLayer extends Layer implements ActionListener {
         }
         //Print the objects
         final float[] dash1 = {10.0f};
-        for (OsmPrimitive primitive : data.allPrimitives()) {
-            g.setStroke(new BasicStroke(2f));
-            Map<String, String> interestingTags = primitive.getInterestingTags();
-            if (primitive instanceof Way) {
-                Way way = (Way) primitive;
-                if ("create".equals(interestingTags.get("action"))) {
-                    g.setColor(CREATED_COLOR.get());
-                } else if ("delete".equals(interestingTags.get("action"))) {
-                    g.setColor(DELETED_COLOR.get());
-                } else if ("modify-old".equals(interestingTags.get("action"))) {
-                    g.setColor(MODIFIED_OLD.get());
-                } else if ("modify-new".equals(interestingTags.get("action"))) {
-                    g.setColor(MODIFIED_NEW.get());
-                } else if ("modify-new-rel".equals(interestingTags.get("action"))) {
-                    g.setColor(MODIFIED_NEW.get());
-                    g.setStroke(new BasicStroke(1.0f,
-                            BasicStroke.CAP_BUTT,
-                            BasicStroke.JOIN_ROUND,
-                            10.0f, dash1, 0.0f));
-                } else if ("modify-old-rel".equals(interestingTags.get("action"))) {
-                    g.setColor(MODIFIED_OLD.get());
-                    g.setStroke(new BasicStroke(1.0f,
-                            BasicStroke.CAP_BUTT,
-                            BasicStroke.JOIN_ROUND,
-                            10.0f, dash1, 0.0f));
-                } else if ("create-rel".equals(interestingTags.get("action"))) {
-                    g.setColor(CREATED_COLOR.get());
-                    g.setStroke(new BasicStroke(1.0f,
-                            BasicStroke.CAP_BUTT,
-                            BasicStroke.JOIN_ROUND,
-                            10.0f, dash1, 0.0f));
-                }else if ("delete-rel".equals(interestingTags.get("action"))) {
-                    g.setColor(DELETED_COLOR.get());
-                    g.setStroke(new BasicStroke(1.0f,
-                            BasicStroke.CAP_BUTT,
-                            BasicStroke.JOIN_ROUND,
-                            10.0f, dash1, 0.0f));
-                }
-                List<Node> nodes = way.getNodes();
-                if (nodes.size() < 2) {
-                    return;
-                }
-                for (int i = 0; i <= way.getNodes().size() - 2; i++) {
-                    Node node1 = way.getNode(i);
-                    Node node2 = way.getNode(i + 1);
-                    Point pnt1 = mv.getPoint(node1);
-                    Point pnt2 = mv.getPoint(node2);
-                    g.draw(new Line2D.Double(pnt1.x, pnt1.y, pnt2.x, pnt2.y));
-                }
-            } else if (primitive instanceof Node) {
-                Node node = (Node) primitive;
-                if (node.getParentWays().isEmpty()) {
-                    if ("create".equals(interestingTags.get("action"))) {
-                        g.setColor(CREATED_COLOR.get());
-                    } else if ("delete".equals(interestingTags.get("action"))) {
-                        g.setColor(DELETED_COLOR.get());
-                    } else if ("modify-old".equals(interestingTags.get("action"))) {
-                        g.setColor(MODIFIED_OLD.get());
-                    } else if ("modify-new".equals(interestingTags.get("action"))) {
-                        g.setColor(MODIFIED_NEW.get());
-                    }
-
-                    Point pnt = mv.getPoint(node);
-                    g.fillOval(pnt.x, pnt.y, 7, 7);
-                }
-            }
+        final BasicStroke defaultStroke = new BasicStroke(2f);
+        for (Way way : data.searchWays(bounds.toBBox())) {
+            g.setStroke(defaultStroke);
+            final String action = way.get("action");
+            paintWay(g, mv, dash1, way, action);
+        }
+        for (Node node : data.searchNodes(bounds.toBBox())) {
+            g.setStroke(defaultStroke);
+            final String action = node.get("action");
+            paintNode(g, mv, node, action);
         }
         g.setStroke(stroke);
+    }
+
+    private static void paintWay(Graphics2D g, MapView mv, float[] dash1, Way way, String action) {
+        switch (action) {
+            case "create":
+                g.setColor(CREATED_COLOR.get());
+                break;
+            case "delete":
+                g.setColor(DELETED_COLOR.get());
+                break;
+            case "modify-old":
+                g.setColor(MODIFIED_OLD.get());
+                break;
+            case "modify-new":
+                g.setColor(MODIFIED_NEW.get());
+                break;
+            case "modify-new-rel":
+            case "modify-old-rel":
+            case "create-rel":
+            case "delete-rel":
+                setRelationColor(g, action);
+                g.setStroke(new BasicStroke(1.0f,
+                        BasicStroke.CAP_BUTT,
+                        BasicStroke.JOIN_ROUND,
+                        10.0f, dash1, 0.0f));
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown action: " + action);
+        }
+        List<Node> nodes = way.getNodes();
+        if (nodes.size() < 2) {
+            return;
+        }
+        // We cannot use MapViewPath
+        Point previous = null;
+        for (Node node : way.getNodes()) {
+            final boolean latLonKnown = node.isLatLonKnown();
+            if (previous == null && latLonKnown) {
+                previous = mv.getPoint(node);
+                continue;
+            } else if (previous != null && !latLonKnown) {
+                previous = null;
+                continue;
+            }
+            if (latLonKnown) {
+                Point point = mv.getPoint(node);
+                g.drawLine(previous.x, previous.y, point.x, point.y);
+                previous = point;
+            }
+        }
+    }
+
+    private static void setRelationColor(Graphics2D g, String action) {
+        switch (action) {
+            case "modify-new-rel":
+                g.setColor(MODIFIED_NEW.get());
+                break;
+            case "modify-old-rel":
+                g.setColor(MODIFIED_OLD.get());
+                break;
+            case "create-rel":
+                g.setColor(CREATED_COLOR.get());
+                break;
+            case "delete-rel":
+                g.setColor(DELETED_COLOR.get());
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown action: " + action);
+        }
+    }
+
+    private static void paintNode(Graphics2D g, MapView mv, Node node, String action) {
+        if (!node.referrers(Way.class).findAny().isPresent()) {
+            switch (action) {
+                case "create":
+                    g.setColor(CREATED_COLOR.get());
+                    break;
+                case "delete":
+                    g.setColor(DELETED_COLOR.get());
+                    break;
+                case "modify-old":
+                    g.setColor(MODIFIED_OLD.get());
+                    break;
+                case "modify-new":
+                    g.setColor(MODIFIED_NEW.get());
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown action: " + action);
+            }
+
+            Point pnt = mv.getPoint(node);
+            g.fillOval(pnt.x, pnt.y, 7, 7);
+        }
     }
 
     @Override
