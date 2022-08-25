@@ -10,6 +10,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Line2D;
 import java.util.List;
+import java.util.Map;
+
 import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.JOptionPane;
@@ -19,6 +21,8 @@ import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
+import org.openstreetmap.josm.data.preferences.CachingProperty;
+import org.openstreetmap.josm.data.preferences.NamedColorProperty;
 import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.dialogs.LayerListDialog;
 import org.openstreetmap.josm.gui.dialogs.LayerListPopup;
@@ -32,6 +36,18 @@ import org.openstreetmap.josm.tools.ImageProvider;
  * @author ruben
  */
 public class ChangesetLayer extends Layer implements ActionListener {
+    private static final CachingProperty<Color> DELETED_COLOR = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
+            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Deleted objects"),
+            new Color(197, 38, 63)).cached();
+    private static final CachingProperty<Color> CREATED_COLOR = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
+            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Created objects"),
+            new Color(50, 214, 184)).cached();
+    private static final CachingProperty<Color> MODIFIED_OLD = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
+            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Modified objects (old)"),
+            new Color(214, 138, 13)).cached();
+    private static final CachingProperty<Color> MODIFIED_NEW = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
+            "org.openstreetmap.josm.plugins.changeset.ChangesetLayer", tr("changeset-viewer: Modified objects (new)"),
+            new Color(229, 228, 61)).cached();
 
     BoundedChangesetDataSet dataSet;
 
@@ -78,39 +94,40 @@ public class ChangesetLayer extends Layer implements ActionListener {
         final float[] dash1 = {10.0f};
         for (OsmPrimitive primitive : data.allPrimitives()) {
             g.setStroke(new BasicStroke(2f));
+            Map<String, String> interestingTags = primitive.getInterestingTags();
             if (primitive instanceof Way) {
                 Way way = (Way) primitive;
-                if ("create".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(50, 214, 184));
-                } else if ("delete".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(197, 38, 63));
-                } else if ("modify-old".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(214, 138, 13));
-                } else if ("modify-new".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(229, 228, 61));
-                } else if ("modify-new-rel".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(229, 228, 61));
+                if ("create".equals(interestingTags.get("action"))) {
+                    g.setColor(CREATED_COLOR.get());
+                } else if ("delete".equals(interestingTags.get("action"))) {
+                    g.setColor(DELETED_COLOR.get());
+                } else if ("modify-old".equals(interestingTags.get("action"))) {
+                    g.setColor(MODIFIED_OLD.get());
+                } else if ("modify-new".equals(interestingTags.get("action"))) {
+                    g.setColor(MODIFIED_NEW.get());
+                } else if ("modify-new-rel".equals(interestingTags.get("action"))) {
+                    g.setColor(MODIFIED_NEW.get());
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
-                            BasicStroke.CAP_ROUND,
+                            BasicStroke.JOIN_ROUND,
                             10.0f, dash1, 0.0f));
-                } else if ("modify-old-rel".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(214, 138, 13));
+                } else if ("modify-old-rel".equals(interestingTags.get("action"))) {
+                    g.setColor(MODIFIED_OLD.get());
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
-                            BasicStroke.CAP_ROUND,
+                            BasicStroke.JOIN_ROUND,
                             10.0f, dash1, 0.0f));
-                } else if ("create-rel".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(50, 214, 184));
+                } else if ("create-rel".equals(interestingTags.get("action"))) {
+                    g.setColor(CREATED_COLOR.get());
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
-                            BasicStroke.CAP_ROUND,
+                            BasicStroke.JOIN_ROUND,
                             10.0f, dash1, 0.0f));
-                }else if ("delete-rel".equals(way.getInterestingTags().get("action"))) {
-                    g.setColor(new Color(197, 38, 63));
+                }else if ("delete-rel".equals(interestingTags.get("action"))) {
+                    g.setColor(DELETED_COLOR.get());
                     g.setStroke(new BasicStroke(1.0f,
                             BasicStroke.CAP_BUTT,
-                            BasicStroke.CAP_ROUND,
+                            BasicStroke.JOIN_ROUND,
                             10.0f, dash1, 0.0f));
                 }
                 List<Node> nodes = way.getNodes();
@@ -127,14 +144,14 @@ public class ChangesetLayer extends Layer implements ActionListener {
             } else if (primitive instanceof Node) {
                 Node node = (Node) primitive;
                 if (node.getParentWays().isEmpty()) {
-                    if ("create".equals(node.getInterestingTags().get("action"))) {
-                        g.setColor(new Color(50, 214, 184));
-                    } else if ("delete".equals(node.getInterestingTags().get("action"))) {
-                        g.setColor(new Color(197, 38, 63));
-                    } else if ("modify-old".equals(node.getInterestingTags().get("action"))) {
-                        g.setColor(new Color(214, 138, 13));
-                    } else if ("modify-new".equals(node.getInterestingTags().get("action"))) {
-                        g.setColor(new Color(229, 228, 61));
+                    if ("create".equals(interestingTags.get("action"))) {
+                        g.setColor(CREATED_COLOR.get());
+                    } else if ("delete".equals(interestingTags.get("action"))) {
+                        g.setColor(DELETED_COLOR.get());
+                    } else if ("modify-old".equals(interestingTags.get("action"))) {
+                        g.setColor(MODIFIED_OLD.get());
+                    } else if ("modify-new".equals(interestingTags.get("action"))) {
+                        g.setColor(MODIFIED_NEW.get());
                     }
 
                     Point pnt = mv.getPoint(node);
@@ -171,7 +188,6 @@ public class ChangesetLayer extends Layer implements ActionListener {
 
     @Override
     public void mergeFrom(Layer layer) {
-
+        throw new UnsupportedOperationException("Layer merge is not supported");
     }
-
 }
