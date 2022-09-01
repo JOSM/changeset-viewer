@@ -75,13 +75,13 @@ public final class ChangesetController {
                         }
                     }
                     return changesets;
-                } catch (NullPointerException | JsonParsingException ex) {
+                } catch (JsonParsingException ex) {
                     Logging.error(ex);
                     return changesets;
                 }
             }
         } catch (IOException ex) {
-            Logger.getLogger(ChangesetController.class.getName()).log(Level.SEVERE, null, ex);
+            Logging.error(ex);
             return changesets;
         }
     }

@@ -3,37 +3,49 @@ package org.openstreetmap.josm.plugins.changeset;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.net.SocketTimeoutException;
 import java.util.Arrays;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.ListCellRenderer;
 
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.gui.MapView;
+import org.openstreetmap.josm.gui.Notification;
 import org.openstreetmap.josm.gui.SideButton;
 import org.openstreetmap.josm.gui.dialogs.ToggleDialog;
 import org.openstreetmap.josm.gui.util.GuiHelper;
+import org.openstreetmap.josm.gui.widgets.JosmTextField;
 import org.openstreetmap.josm.plugins.changeset.util.CellRenderer;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetBeen;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetController;
 import org.openstreetmap.josm.plugins.changeset.util.Config;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
+import org.openstreetmap.josm.tools.GBC;
 import org.openstreetmap.josm.tools.ImageProvider;
+import org.openstreetmap.josm.tools.Logging;
 import org.openstreetmap.josm.tools.OpenBrowser;
 import org.openstreetmap.josm.tools.Shortcut;
+import org.openstreetmap.josm.tools.bugreport.BugReport;
 
 /**
  * The dialog to choose what changeset to show
@@ -45,8 +57,9 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
     private final MapView mv = MainApplication.getMap().mapView;
     private final JButton jButtonNext = new JButton(tr("Next ->"));
     private final JButton jButtonprevious = new JButton(tr("<- Previous"));
-    private final JTextField jTextFieldChangesetId;
+    private final JosmTextField jTextFieldChangesetId;
     private final ListCellRenderer<ChangesetBeen> renderer = new CellRenderer();
+    private final JProgressBar progressBar = new JProgressBar();
     private final JComboBox<ChangesetBeen> jComboBox = new JComboBox<>();
     private boolean flag = true;
 
@@ -58,10 +71,13 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
                 Shortcut.registerShortcut("Tool:changeset-viewer", tr("Toggle: {0}", tr("Tool:changeset-Viewer")),
                         KeyEvent.VK_T, Shortcut.ALT_CTRL_SHIFT), 120);
 
-        JPanel jPanelProjects = new JPanel(new GridLayout(4, 1));
+        JPanel jPanelProjects = new JPanel(new GridBagLayout());
         jPanelProjects.setBorder(BorderFactory.createTitledBorder(""));
         JButton jButtonGetChangesets = new JButton(tr("Get changeset in the area"));
-        jPanelProjects.add(jButtonGetChangesets);
+        jPanelProjects.add(jButtonGetChangesets, GBC.eol().fill(GBC.HORIZONTAL));
+        jPanelProjects.add(progressBar, GBC.eol().fill(GBC.HORIZONTAL));
+        progressBar.setVisible(false);
+        progressBar.setIndeterminate(true);
         jButtonprevious.setEnabled(false);
         jButtonNext.setEnabled(false);
 
@@ -92,15 +108,12 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
         });
 
         jComboBox.addActionListener(this);
-        jPanelProjects.add(jComboBox);
-        JPanel jPanelOptions = new JPanel(new GridLayout(1, 2));
-        jPanelOptions.add(jButtonprevious);
-        jPanelOptions.add(jButtonNext);
-        jPanelProjects.add(jPanelOptions);
-        jTextFieldChangesetId = new JTextField("55006771");
-        jPanelProjects.add(jTextFieldChangesetId);
-        JPanel jContentPanel = new JPanel(new GridLayout(1, 1));
-        jContentPanel.add(jPanelProjects);
+        jPanelProjects.add(jComboBox, GBC.eol().fill(GBC.HORIZONTAL));
+        jPanelProjects.add(jButtonprevious, GBC.std().fill(GridBagConstraints.HORIZONTAL));
+        jPanelProjects.add(jButtonNext, GBC.eol().fill(GridBagConstraints.HORIZONTAL));
+        jTextFieldChangesetId = new JosmTextField();
+        jTextFieldChangesetId.setHint("55006771");
+        jPanelProjects.add(jTextFieldChangesetId, GBC.eol().fill(GBC.HORIZONTAL));
         SideButton displayChangesetButton = new SideButton(new AbstractAction() {
             {
                 putValue(NAME, tr("Display changeset"));
@@ -133,7 +146,7 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
                 }
             }
         });
-        createLayout(jContentPanel, false, Arrays.asList(displayChangesetButton, openChangesetweb));
+        createLayout(jPanelProjects, false, Arrays.asList(displayChangesetButton, openChangesetweb));
     }
 
     @Override
@@ -150,19 +163,33 @@ public final class ChangesetDialog extends ToggleDialog implements ActionListene
         if (this.buttonUpdater != null) {
             this.buttonUpdater.cancel(true);
         }
+        this.progressBar.setVisible(true);
+        this.jComboBox.setVisible(false);
         jComboBox.removeAllItems();
         jComboBox.setEnabled(false);
-        CompletableFuture<ChangesetBeen[]> future = CompletableFuture.supplyAsync(ChangesetController::getListChangeset, MainApplication.worker);
-        future.thenAccept(changesetBeens -> GuiHelper.runInEDT(() -> {
-            jComboBox.setEnabled(true);
-            for (ChangesetBeen changesetBeen : changesetBeens) {
-                if (changesetBeen != null) {
-                    jComboBox.addItem(changesetBeen);
+        this.buttonUpdater = MainApplication.worker.submit(this::asyncChangesets);
+    }
+
+    private void asyncChangesets() {
+        try {
+            ChangesetBeen[] changesetBeens = ChangesetController.getListChangeset();
+            GuiHelper.runInEDT(() -> {
+                jComboBox.setEnabled(true);
+                for (ChangesetBeen changesetBeen : changesetBeens) {
+                    if (changesetBeen != null) {
+                        jComboBox.addItem(changesetBeen);
+                    }
                 }
-            }
-            jComboBox.setRenderer(renderer);
-        }));
-        this.buttonUpdater = future;
+                jComboBox.setRenderer(renderer);
+                this.progressBar.setVisible(false);
+                this.jComboBox.setVisible(true);
+            });
+        } finally {
+            GuiHelper.runInEDT(() -> {
+                this.progressBar.setVisible(false);
+                this.jComboBox.setVisible(true);
+            });
+        }
     }
 
     /**
