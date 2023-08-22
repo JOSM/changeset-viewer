@@ -3,18 +3,19 @@ package org.openstreetmap.josm.plugins.changeset.util;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonString;
-import javax.json.JsonValue;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.coor.ILatLon;
@@ -85,13 +86,11 @@ public class DataSetChangesetBuilder {
             } else if ("delete".equals(action) && "way".equals(type) && !obj.isNull("old")) {
                 JsonObject old = obj.getJsonObject("old");
                 processLineString(tags, old, action);
-            } //CREATE
-            else if ("create".equals(action) && "node".equals(type)) {
+            } else if ("create".equals(action) && "node".equals(type)) { //CREATE
                 processPoint(tags, obj, action);
             } else if ("create".equals(action) && "way".equals(type)) {
                 processLineString(tags, obj, action);
-            } //MODIFY
-            else if ("modify".equals(action) && "way".equals(type)) {
+            } else if ("modify".equals(action) && "way".equals(type)) { //MODIFY
                 //NEW
                 processLineString(tags, obj, "modify-new");
                 //OLD
@@ -205,26 +204,17 @@ public class DataSetChangesetBuilder {
         double minLon = bounds.getMinLon();
         double maxLat = bounds.getMaxLat();
         double maxLon = bounds.getMaxLon();
-        List<Node> nodes = new ArrayList<>(4);
-        Node n1 = new Node(new LatLon(minLat, minLon));
-        dataSet.addPrimitive(n1);
-        nodes.add(n1);
-        Node n2 = new Node(new LatLon(minLat, maxLon));
-        dataSet.addPrimitive(n2);
-        nodes.add(n2);
-        Node n3 = new Node(new LatLon(maxLat, maxLon));
-        dataSet.addPrimitive(n3);
-        nodes.add(n3);
-        Node n4 = new Node(new LatLon(maxLat, minLon));
-        dataSet.addPrimitive(n4);
-        nodes.add(n4);
-        Node n5 = new Node(new LatLon(minLat, minLon));
-        dataSet.addPrimitive(n5);
-        nodes.add(n5);
+        List<Node> nodes = Arrays.asList(
+                new Node(new LatLon(minLat, minLon)),
+                new Node(new LatLon(minLat, maxLon)),
+                new Node(new LatLon(maxLat, maxLon)),
+                new Node(new LatLon(maxLat, minLon)),
+                new Node(new LatLon(minLat, minLon))
+        );
         Way way = new Way();
         way.setNodes(nodes);
         fillTagsFromFeature(tags, way, action);
-        dataSet.addPrimitive(way);
+        dataSet.addPrimitiveRecursive(way);
     }
 
     private static Bounds buildRelation(final JsonObject obj) {
