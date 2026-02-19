@@ -10,12 +10,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
-import jakarta.json.JsonString;
-import jakarta.json.JsonValue;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.coor.ILatLon;
@@ -25,9 +21,13 @@ import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.tools.Logging;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 /**
- * Build the changeset dataset to show the user
+ * Build the changeset dataset from an augmented diff XML file
  * @author ruben
  */
 public class DataSetChangesetBuilder {
@@ -63,62 +63,26 @@ public class DataSetChangesetBuilder {
 
     /**
      * Build the dataset to show the user
-     * @param dataString The json string
+     * @param dataString The adiff XML string
      * @return The dataset
      */
     public BoundedChangesetDataSet build(final String dataString) {
         dataSet = new DataSet();
-        try (JsonReader reader = Json.createReader(new StringReader(dataString))) {
-            JsonObject jsonObject = reader.readObject();
-            return build(jsonObject.getJsonArray("elements"));
-        }
-    }
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = factory.newDocumentBuilder();
+            Document doc = docBuilder.parse(new InputSource(new StringReader(dataString)));
+            doc.getDocumentElement().normalize();
 
-    private BoundedChangesetDataSet build(JsonArray array) {
-        for (JsonObject obj : array.getValuesAs(JsonObject.class)) {
-            String action = obj.getString("action");
-            String type = obj.getString("type");
-            JsonObject tags = obj.getJsonObject("tags");
-            //DELETE
-            if ("delete".equals(action) && "node".equals(type) && !obj.isNull("old")) {
-                JsonObject old = obj.getJsonObject("old");
-                processPoint(tags, old, action);
-            } else if ("delete".equals(action) && "way".equals(type) && !obj.isNull("old")) {
-                JsonObject old = obj.getJsonObject("old");
-                processLineString(tags, old, action);
-            } else if ("create".equals(action) && "node".equals(type)) { //CREATE
-                processPoint(tags, obj, action);
-            } else if ("create".equals(action) && "way".equals(type)) {
-                processLineString(tags, obj, action);
-            } else if ("modify".equals(action) && "way".equals(type)) { //MODIFY
-                //NEW
-                processLineString(tags, obj, "modify-new");
-                //OLD
-                JsonObject old = obj.getJsonObject("old");
-                processLineString(tags, old, "modify-old");
-            } else if ("modify".equals(action) && "node".equals(type)) {
-                //NEW
-                processPoint(tags, obj, "modify-new");
-                //OLD
-                JsonObject old = obj.getJsonObject("old");
-                processPoint(tags, old, "modify-old");
-                //RELATION
-            } else if ("modify".equals(action) && "relation".equals(type)) {
-                //OLD
-                JsonObject old = obj.getJsonObject("old");
-                Bounds boundsRelationOld = buildRelation(old);
-                bounds2rectangle(tags, boundsRelationOld, "modify-old-rel");
-                //NEW
-                Bounds boundsRelationNew = buildRelation(obj);
-                bounds2rectangle(tags, boundsRelationNew, "modify-new-rel");
-            } else if ("create".equals(action) && "relation".equals(type)) {
-                Bounds boundsRelationNew = buildRelation(obj);
-                bounds2rectangle(tags, boundsRelationNew, "create-rel");
-            } else if ("delete".equals(action) && "relation".equals(type)) {
-                JsonObject old = obj.getJsonObject("old");
-                Bounds boundsRelationNew = buildRelation(old);
-                bounds2rectangle(tags, boundsRelationNew, "delete-rel");
+            NodeList actionNodes = doc.getElementsByTagName("action");
+            for (int i = 0; i < actionNodes.getLength(); i++) {
+                Element actionElem = (Element) actionNodes.item(i);
+                String actionType = actionElem.getAttribute("type");
+                processAction(actionElem, actionType);
             }
+        } catch (Exception e) {
+            Logging.error("Error parsing adiff XML: " + e.getMessage());
+            Logging.error(e);
         }
 
         Bounds bounds = null;
@@ -128,30 +92,95 @@ public class DataSetChangesetBuilder {
         return new BoundedChangesetDataSet(dataSet, bounds);
     }
 
-    private void processPoint(final JsonObject tags, final JsonObject nodeJson, final String action) {
-        final Node node = createNode(newLatLon(nodeJson));
-        fillTagsFromFeature(tags, node, action);
+    private void processAction(final Element actionElem, final String actionType) {
+        switch (actionType) {
+            case "create":
+                processCreateAction(actionElem);
+                break;
+            case "modify":
+                processModifyAction(actionElem);
+                break;
+            case "delete":
+                processDeleteAction(actionElem);
+                break;
+            default:
+                Logging.warn("Unknown action type: " + actionType);
+        }
     }
 
-    private void processLineString(final JsonObject tags, final JsonObject wayJson, final String action) {
-        JsonArray arrayNodes = wayJson.getJsonArray("nodes");
-        if (arrayNodes.isEmpty()) {
+    private void processCreateAction(final Element actionElem) {
+        Element osmElement = getFirstOsmElement(actionElem);
+        if (osmElement == null) return;
+        processOsmElement(osmElement, "create");
+    }
+
+    private void processModifyAction(final Element actionElem) {
+        Element oldContainer = getChildElement(actionElem, "old");
+        Element newContainer = getChildElement(actionElem, "new");
+        if (oldContainer != null) {
+            Element oldElement = getFirstOsmElement(oldContainer);
+            if (oldElement != null) {
+                processOsmElement(oldElement, "modify-old");
+            }
+        }
+        if (newContainer != null) {
+            Element newElement = getFirstOsmElement(newContainer);
+            if (newElement != null) {
+                processOsmElement(newElement, "modify-new");
+            }
+        }
+    }
+
+    private void processDeleteAction(final Element actionElem) {
+        Element oldContainer = getChildElement(actionElem, "old");
+        if (oldContainer != null) {
+            Element oldElement = getFirstOsmElement(oldContainer);
+            if (oldElement != null) {
+                processOsmElement(oldElement, "delete");
+            }
+        }
+    }
+
+    private void processOsmElement(final Element elem, final String action) {
+        String tagName = elem.getTagName();
+        Map<String, String> tags = extractTags(elem);
+        switch (tagName) {
+            case "node":
+                processPoint(tags, elem, action);
+                break;
+            case "way":
+                processLineString(tags, elem, action);
+                break;
+            case "relation":
+                String relAction = action + "-rel";
+                Bounds boundsRelation = buildRelation(elem);
+                bounds2rectangle(tags, boundsRelation, relAction);
+                break;
+            default:
+                Logging.warn("Unknown OSM element type: " + tagName);
+        }
+    }
+
+    private void processPoint(final Map<String, String> tags, final Element nodeElem, final String action) {
+        LatLon latLon = extractLatLon(nodeElem);
+        if (latLon == null) return;
+        final Node node = createNode(latLon);
+        fillTags(tags, node, action);
+    }
+
+    private void processLineString(final Map<String, String> tags, final Element wayElem, final String action) {
+        List<LatLon> coordinates = extractWayCoordinates(wayElem);
+        if (coordinates.isEmpty()) {
             return;
         }
-
-        List<LatLon> coordinates = new LinkedList<>();
-        for (int i = 0; i < arrayNodes.size(); i++) {
-            coordinates.add(newLatLon(arrayNodes.getJsonObject(i)));
-        }
-
         final Way way = createWay(coordinates);
-        fillTagsFromFeature(tags, way, action);
+        fillTags(tags, way, action);
     }
 
-    private static void fillTagsFromFeature(final JsonObject tags, final OsmPrimitive primitive, final String action) {
-        if (tags != null) {
-            primitive.setKeys(getTags(tags, action));
-        }
+    private static void fillTags(final Map<String, String> tags, final OsmPrimitive primitive, final String action) {
+        Map<String, String> allTags = new TreeMap<>(tags);
+        allTags.put("action", action);
+        primitive.setKeys(allTags);
     }
 
     private Node createNode(final LatLon latLon) {
@@ -170,17 +199,7 @@ public class DataSetChangesetBuilder {
         return way;
     }
 
-    private static Map<String, String> getTags(final JsonObject tags, final String action) {
-        final Map<String, String> mapTags = new TreeMap<>();
-        mapTags.put("action", action);
-        for (Map.Entry<String, JsonValue> entry : tags.entrySet()) {
-            mapTags.put(entry.getKey(), String.valueOf(entry.getValue().toString()));
-        }
-        return mapTags;
-    }
-
     private static Bounds mergeBounds(final Bounds bounds, final OsmPrimitive osmPrimitive) {
-        // ways and relations consist of nodes that are already in the dataset
         if (osmPrimitive instanceof Node && ((Node) osmPrimitive).isLatLonKnown()) {
             return mergeBounds(bounds, ((ILatLon) osmPrimitive));
         }
@@ -196,7 +215,7 @@ public class DataSetChangesetBuilder {
         }
     }
 
-    private void bounds2rectangle(final JsonObject tags, final Bounds bounds, final String action) {
+    private void bounds2rectangle(final Map<String, String> tags, final Bounds bounds, final String action) {
         if (bounds == null) {
             return;
         }
@@ -213,58 +232,112 @@ public class DataSetChangesetBuilder {
         );
         Way way = new Way();
         way.setNodes(nodes);
-        fillTagsFromFeature(tags, way, action);
+        fillTags(tags, way, action);
         dataSet.addPrimitiveRecursive(way);
     }
 
-    private static Bounds buildRelation(final JsonObject obj) {
+    private static Bounds buildRelation(final Element relationElem) {
         DataSet dataSetRel = new DataSet();
-        JsonArray members = obj.getJsonArray("members");
-        for (int j = 0; j < members.size(); j++) {
-            JsonObject member = members.getJsonObject(j);
-            String memberType = member.getString("type");
+        NodeList members = relationElem.getElementsByTagName("member");
+        for (int j = 0; j < members.getLength(); j++) {
+            Element member = (Element) members.item(j);
+            String memberType = member.getAttribute("type");
             if ("way".equals(memberType)) {
-                dataSetRel.addPrimitive(processRelationLineString(member, dataSetRel));
+                Way way = processRelationWayMember(member, dataSetRel);
+                dataSetRel.addPrimitive(way);
             } else if ("node".equals(memberType)) {
-                dataSetRel.addPrimitive(newNode(member));
+                LatLon latLon = extractLatLon(member);
+                if (latLon != null) {
+                    Node node = new Node(latLon);
+                    dataSetRel.addPrimitive(node);
+                }
             }
         }
-        Bounds boundsRelationOld = null;
+        Bounds boundsRel = null;
         for (OsmPrimitive osmPrimitive : dataSetRel.allPrimitives()) {
-            boundsRelationOld = mergeBounds(boundsRelationOld, osmPrimitive);
+            boundsRel = mergeBounds(boundsRel, osmPrimitive);
         }
-        return boundsRelationOld;
+        return boundsRel;
     }
 
-    private static LatLon newLatLon(final JsonObject json) {
-        JsonString latString = json.getJsonString("lat");
-        JsonString lonString = json.getJsonString("lon");
-        if (latString == null || lonString == null) {
-            Logging.error("Invalid JSON: " + json);
-            return null;
-        }
-        return new LatLon(
-                Double.parseDouble(latString.getString()),
-                Double.parseDouble(lonString.getString()));
-    }
-
-    private static Node newNode(final JsonObject nodeJson) {
-        return new Node(newLatLon(nodeJson));
-    }
-
-    private static Way processRelationLineString(final JsonObject wayJson, DataSet dataSetOld) {
-        JsonArray arrayNodes = wayJson.getJsonArray("nodes");
+    private static Way processRelationWayMember(final Element memberElem, DataSet dataSetRel) {
         Way way = new Way();
-        if (arrayNodes.isEmpty()) {
+        NodeList ndNodes = memberElem.getElementsByTagName("nd");
+        if (ndNodes.getLength() == 0) {
             return way;
         }
-        List<Node> nodes = new ArrayList<>(arrayNodes.size());
-        for (int i = 0; i < arrayNodes.size(); i++) {
-            Node node = newNode(arrayNodes.getJsonObject(i));
-            dataSetOld.addPrimitive(node);
-            nodes.add(node);
+        List<Node> nodes = new ArrayList<>(ndNodes.getLength());
+        for (int i = 0; i < ndNodes.getLength(); i++) {
+            Element nd = (Element) ndNodes.item(i);
+            LatLon latLon = extractLatLon(nd);
+            if (latLon != null) {
+                Node node = new Node(latLon);
+                dataSetRel.addPrimitive(node);
+                nodes.add(node);
+            }
         }
         way.setNodes(nodes);
         return way;
+    }
+
+    // --- XML helper methods ---
+
+    private static LatLon extractLatLon(final Element elem) {
+        String latStr = elem.getAttribute("lat");
+        String lonStr = elem.getAttribute("lon");
+        if (latStr == null || latStr.isEmpty() || lonStr == null || lonStr.isEmpty()) {
+            return null;
+        }
+        try {
+            return new LatLon(Double.parseDouble(latStr), Double.parseDouble(lonStr));
+        } catch (NumberFormatException e) {
+            Logging.error("Invalid lat/lon: " + latStr + ", " + lonStr);
+            return null;
+        }
+    }
+
+    private static List<LatLon> extractWayCoordinates(final Element wayElem) {
+        List<LatLon> coordinates = new LinkedList<>();
+        NodeList ndNodes = wayElem.getElementsByTagName("nd");
+        for (int i = 0; i < ndNodes.getLength(); i++) {
+            Element nd = (Element) ndNodes.item(i);
+            LatLon latLon = extractLatLon(nd);
+            if (latLon != null) {
+                coordinates.add(latLon);
+            }
+        }
+        return coordinates;
+    }
+
+    private static Map<String, String> extractTags(final Element elem) {
+        Map<String, String> tags = new TreeMap<>();
+        NodeList tagNodes = elem.getElementsByTagName("tag");
+        for (int i = 0; i < tagNodes.getLength(); i++) {
+            Element tag = (Element) tagNodes.item(i);
+            String key = tag.getAttribute("k");
+            String value = tag.getAttribute("v");
+            if (key != null && !key.isEmpty()) {
+                tags.put(key, value);
+            }
+        }
+        return tags;
+    }
+
+    private static Element getFirstOsmElement(final Element parent) {
+        for (String tagName : new String[]{"node", "way", "relation"}) {
+            NodeList list = parent.getElementsByTagName(tagName);
+            if (list.getLength() > 0) {
+                return (Element) list.item(0);
+            }
+        }
+        return null;
+    }
+
+    private static Element getChildElement(final Element parent, final String childName) {
+        NodeList children = parent.getElementsByTagName(childName);
+        if (children.getLength() > 0) {
+            return (Element) children.item(0);
+        }
+        return null;
     }
 }

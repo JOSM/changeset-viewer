@@ -25,7 +25,7 @@ public class CellRenderer implements ListCellRenderer<ChangesetBeen> {
         if (changesetBeen != null) {
             JPanel jPanelRow = new JPanel(new GridLayout(1, 3, 10, 10));
             JPanel jPanelNumChanges = new JPanel(new GridLayout(1, 2, 10, 10));
-            jPanelNumChanges.setBackground(Color.BLACK);
+            jPanelNumChanges.setOpaque(false);
             JLabel jLabelDate = new JLabel(changesetBeen.getDate(), SwingConstants.CENTER);
             jLabelDate.setForeground(new Color(0, 174, 255));
             jPanelChangeset.setBorder(BorderFactory.createTitledBorder("Changeset :" + changesetBeen.getChangesetId()));
