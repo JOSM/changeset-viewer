@@ -1,6 +1,7 @@
 // License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
@@ -18,36 +19,80 @@ import javax.swing.SwingConstants;
  */
 public class CellRenderer implements ListCellRenderer<ChangesetBeen> {
 
+    private static final Color COLOR_CREATE = new Color(50, 214, 184);
+    private static final Color COLOR_MODIFY = new Color(229, 228, 61);
+    private static final Color COLOR_DELETE = new Color(197, 38, 63);
+    private static final Color COLOR_DATE = new Color(0, 174, 255);
+    private static final Color COLOR_SELECTED_BG = new Color(51, 102, 153);
+    private static final Font FONT_BOLD = new Font("SansSerif", Font.BOLD, 11);
+    private static final Font FONT_NORMAL = new Font("SansSerif", Font.PLAIN, 11);
+
     @Override
     public Component getListCellRendererComponent(JList<? extends ChangesetBeen> list, ChangesetBeen changesetBeen, int index,
                                                   boolean isSelected, boolean cellHasFocus) {
-        JPanel jPanelChangeset = new JPanel(new GridLayout(2, 1, 8, 8));
+        JPanel row = new JPanel(new BorderLayout(4, 0));
+        row.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+
         if (changesetBeen != null) {
-            JPanel jPanelRow = new JPanel(new GridLayout(1, 3, 10, 10));
-            JPanel jPanelNumChanges = new JPanel(new GridLayout(1, 2, 10, 10));
-            jPanelNumChanges.setBackground(Color.BLACK);
-            JLabel jLabelDate = new JLabel(changesetBeen.getDate(), SwingConstants.CENTER);
-            jLabelDate.setForeground(new Color(0, 174, 255));
-            jPanelChangeset.setBorder(BorderFactory.createTitledBorder("Changeset :" + changesetBeen.getChangesetId()));
-            JLabel jLabelUser = new JLabel(changesetBeen.getUser(), SwingConstants.CENTER);
-            JLabel jLabelCreate = new JLabel(String.valueOf(changesetBeen.getCreate()), SwingConstants.CENTER);
-            jLabelCreate.setForeground(new Color(50, 214, 184));
-            jLabelCreate.setFont(new Font("Serif", Font.BOLD, 12));
-            JLabel jLabelModify = new JLabel(String.valueOf(changesetBeen.getModify()), SwingConstants.CENTER);
-            jLabelModify.setForeground(new Color(229, 228, 61));
-            jLabelModify.setFont(new Font("Serif", Font.BOLD, 12));
-            JLabel jLabelDelete = new JLabel(String.valueOf(changesetBeen.getDelete()), SwingConstants.CENTER);
-            jLabelDelete.setForeground(new Color(197, 38, 63));
-            jLabelDelete.setFont(new Font("Serif", Font.BOLD, 12));
-            jPanelRow.add(jLabelUser);
-            jPanelNumChanges.add(jLabelCreate);
-            jPanelNumChanges.add(jLabelModify);
-            jPanelNumChanges.add(jLabelDelete);
-            jPanelRow.add(jPanelNumChanges);
-            //last
-            jPanelChangeset.add(jLabelDate);
-            jPanelChangeset.add(jPanelRow);
+            // Left: ID + user
+            JLabel idLabel = new JLabel("#" + changesetBeen.getChangesetId() + "  ");
+            idLabel.setFont(FONT_BOLD);
+
+            JLabel userLabel = new JLabel(changesetBeen.getUser());
+            userLabel.setFont(FONT_NORMAL);
+
+            JPanel leftPanel = new JPanel(new BorderLayout(4, 0));
+            leftPanel.setOpaque(false);
+            leftPanel.add(idLabel, BorderLayout.WEST);
+            leftPanel.add(userLabel, BorderLayout.CENTER);
+
+            // Center: date
+            String dateStr = formatDate(changesetBeen.getDate());
+            JLabel dateLabel = new JLabel(dateStr, SwingConstants.CENTER);
+            dateLabel.setForeground(COLOR_DATE);
+            dateLabel.setFont(FONT_NORMAL);
+
+            // Right: C / M / D stats
+            JPanel statsPanel = new JPanel(new GridLayout(1, 3, 8, 0));
+            statsPanel.setOpaque(false);
+
+            JLabel createLabel = new JLabel(String.valueOf(changesetBeen.getCreate()), SwingConstants.CENTER);
+            createLabel.setForeground(COLOR_CREATE);
+            createLabel.setFont(FONT_BOLD);
+
+            JLabel modifyLabel = new JLabel(String.valueOf(changesetBeen.getModify()), SwingConstants.CENTER);
+            modifyLabel.setForeground(COLOR_MODIFY);
+            modifyLabel.setFont(FONT_BOLD);
+
+            JLabel deleteLabel = new JLabel(String.valueOf(changesetBeen.getDelete()), SwingConstants.CENTER);
+            deleteLabel.setForeground(COLOR_DELETE);
+            deleteLabel.setFont(FONT_BOLD);
+
+            statsPanel.add(createLabel);
+            statsPanel.add(modifyLabel);
+            statsPanel.add(deleteLabel);
+
+            row.add(leftPanel, BorderLayout.WEST);
+            row.add(dateLabel, BorderLayout.CENTER);
+            row.add(statsPanel, BorderLayout.EAST);
         }
-        return jPanelChangeset;
+
+        if (isSelected) {
+            row.setBackground(COLOR_SELECTED_BG);
+            row.setOpaque(true);
+        } else {
+            row.setOpaque(true);
+            row.setBackground(list.getBackground());
+        }
+
+        return row;
+    }
+
+    private static String formatDate(String date) {
+        if (date == null || date.isEmpty()) {
+            return "";
+        }
+        // "2023-04-21T10:52:43Z" -> "2023-04-21 10:52"
+        return date.replace("T", " ").replaceAll(":\\d{2}Z$", "").replaceAll(":\\d{2}$", "");
     }
 }

@@ -1,19 +1,9 @@
 // License: MIT. For details, see LICENSE file.
 package org.openstreetmap.josm.plugins.changeset.util;
 
-import static org.openstreetmap.josm.tools.I18n.tr;
-
 import java.io.IOException;
 import java.net.URL;
 
-import javax.swing.BoxLayout;
-import javax.swing.JPanel;
-
-import org.openstreetmap.josm.data.preferences.StringProperty;
-import org.openstreetmap.josm.gui.ExtendedDialog;
-import org.openstreetmap.josm.gui.MainApplication;
-import org.openstreetmap.josm.gui.widgets.HtmlPanel;
-import org.openstreetmap.josm.gui.widgets.JosmTextField;
 import org.openstreetmap.josm.tools.HttpClient;
 import org.openstreetmap.josm.tools.HttpClient.Response;
 import org.openstreetmap.josm.tools.Logging;
@@ -23,63 +13,100 @@ import org.openstreetmap.josm.tools.Logging;
  * @author ruben
  */
 public final class Request {
-    private static final StringProperty OSMCHA_AUTHORIZATION = new StringProperty("osmcha.authorization.key", null);
+    /** Maximum response size for downloads (50 MB) */
+    public static final long MAX_DOWNLOAD_SIZE = 50L * 1024 * 1024;
+
     private Request() {
         // Hide constructor
-    }
-
-    /**
-     * Get the OSMCha authorization key
-     * @return {@code true} if the user entered an authorization key
-     */
-    private static boolean getOsmChaAuthorization() {
-        JPanel jPanel = new JPanel();
-        jPanel.setLayout(new BoxLayout(jPanel, BoxLayout.Y_AXIS));
-        String message = tr("Please enter your OSMCha API Key (see link)");
-        String userUrl = Config.OSMCHA_HOST + "user";
-        HtmlPanel htmlPanel = new HtmlPanel("<html><body style=\"width: 375px;\">" + message
-                + "<br><a href=\"" + userUrl + "\">" + userUrl + "</a></body></html>");
-        htmlPanel.enableClickableHyperlinks();
-        jPanel.add(htmlPanel);
-        JosmTextField textField = new JosmTextField();
-        textField.setHint("Token <Token Value>");
-        jPanel.add(textField);
-        ExtendedDialog ed = new ExtendedDialog(MainApplication.getMainFrame(),
-                tr("Missing OSMCha API Key"), tr("OK"), tr("Cancel"))
-                .setContent(jPanel);
-        int ret = ed.showDialog().getValue();
-        if (ret == ExtendedDialog.DialogClosedOtherwise || ret == 2) {
-            return false;
-        }
-        OSMCHA_AUTHORIZATION.put(textField.getText());
-        return OSMCHA_AUTHORIZATION.isSet();
     }
 
     /**
      * Get a URL
      * @param url The url to GET
      * @return The result (or null)
-     * @throws IOException if we couldn't connect
+     * @throws IOException if we couldn't connect or the response is too large
      */
     public static String sendGET(String url) throws IOException {
         Logging.trace(url);
-        HttpClient client = HttpClient.create(new URL(url))
-                .setAccept("application/json");
-        if (url.contains(Config.OSMCHA_HOST_API)) {
-            if (!OSMCHA_AUTHORIZATION.isSet() && !getOsmChaAuthorization()) {
-                // They haven't authorized osmcha before, and they declined authorization now
-                return null;
+        HttpClient client = HttpClient.create(new URL(url));
+        Response response = client.connect();
+        String result = null;
+        if (response.getResponseCode() == 200) {
+            long contentLength = response.getContentLength();
+            if (contentLength > MAX_DOWNLOAD_SIZE) {
+                response.disconnect();
+                throw new IOException(String.format(
+                        "Changeset file is too large to load: %.1f MB (maximum allowed: %d MB).",
+                        contentLength / (1024.0 * 1024.0),
+                        MAX_DOWNLOAD_SIZE / (1024 * 1024)));
             }
-            client.setHeader("Authorization", OSMCHA_AUTHORIZATION.get());
+            result = response.fetchContent();
+        }
+        response.disconnect();
+        return result;
+    }
+
+    /**
+     * Get a URL with an Authorization header
+     * @param url The url to GET
+     * @param token The authorization token (sent as "Token {token}")
+     * @return The result (or null)
+     * @throws IOException if we couldn't connect or the response is too large
+     */
+    public static String sendGETWithAuth(String url, String token) throws IOException {
+        Logging.trace(url);
+        HttpClient client = HttpClient.create(new URL(url));
+        client.setHeader("Authorization", "Token " + token);
+        client.setReadTimeout(180 * 1000);
+        Response response = client.connect();
+        String result = null;
+        if (response.getResponseCode() == 200) {
+            long contentLength = response.getContentLength();
+            if (contentLength > MAX_DOWNLOAD_SIZE) {
+                response.disconnect();
+                throw new IOException(String.format(
+                        "Changeset file is too large to load: %.1f MB (maximum allowed: %d MB).",
+                        contentLength / (1024.0 * 1024.0),
+                        MAX_DOWNLOAD_SIZE / (1024 * 1024)));
+            }
+            result = response.fetchContent();
+        }
+        response.disconnect();
+        return result;
+    }
+
+    /**
+     * Send a POST request
+     * @param url The url to POST to
+     * @param body The request body
+     * @param timeoutSeconds The read timeout in seconds (0 for default)
+     * @return The result (or null)
+     * @throws IOException if we couldn't connect
+     */
+    public static String sendPOST(String url, String body, int timeoutSeconds) throws IOException {
+        Logging.trace(url);
+        HttpClient client = HttpClient.create(new URL(url), "POST")
+                .setRequestBody(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        if (timeoutSeconds > 0) {
+            client.setReadTimeout(timeoutSeconds * 1000);
         }
         Response response = client.connect();
         String result = null;
         if (response.getResponseCode() == 200) {
             result = response.fetchContent();
-        } else if (response.getResponseCode() == 401 && url.contains(Config.OSMCHA_HOST_API)) {
-            OSMCHA_AUTHORIZATION.remove();
         }
         response.disconnect();
         return result;
+    }
+
+    /**
+     * Send a POST request with default timeout
+     * @param url The url to POST to
+     * @param body The request body
+     * @return The result (or null)
+     * @throws IOException if we couldn't connect
+     */
+    public static String sendPOST(String url, String body) throws IOException {
+        return sendPOST(url, body, 0);
     }
 }
