@@ -57,7 +57,7 @@ public final class Request {
         Logging.trace(url);
         HttpClient client = HttpClient.create(new URL(url));
         client.setHeader("Authorization", "Token " + token);
-        client.setReadTimeout(60 * 1000);
+        client.setReadTimeout(180 * 1000);
         Response response = client.connect();
         String result = null;
         if (response.getResponseCode() == 200) {
