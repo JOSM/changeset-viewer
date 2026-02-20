@@ -11,6 +11,12 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import jakarta.json.JsonValue;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -105,13 +111,16 @@ public final class ChangesetController {
 
         // Query all elements in bbox; [adiff] mode only outputs elements that
         // changed between the two timestamps (create/modify/delete).
-        String query = "[adiff:\"" + beforeTime + "\",\"" + afterTime + "\"]" + bboxFilter + ";"
+        int timeoutSec = 120;
+        String query = "[adiff:\"" + beforeTime + "\",\"" + afterTime + "\"]"
+                + "[timeout:" + timeoutSec + "]" + bboxFilter + ";"
                 + "node;out meta;"
                 + "way;out meta geom;"
                 + "relation;out meta geom;";
 
         Logging.info("Overpass query for changeset " + changesetId + ": " + query);
-        return Request.sendPOST(Config.getOverpassUrl(), "data=" + java.net.URLEncoder.encode(query, "UTF-8"));
+        return Request.sendPOST(Config.getOverpassUrl(),
+                "data=" + java.net.URLEncoder.encode(query, "UTF-8"), timeoutSec + 10);
     }
 
     private static String adjustTime(String isoTime, int seconds) {
@@ -143,6 +152,72 @@ public final class ChangesetController {
             }
         }
         return new ArrayList<>(changesetMap.values());
+    }
+
+    /**
+     * Result from OSMCha API including total count for pagination
+     */
+    public static class OsmchaResult {
+        private final List<ChangesetBeen> changesets;
+        private final int totalCount;
+
+        public OsmchaResult(List<ChangesetBeen> changesets, int totalCount) {
+            this.changesets = changesets;
+            this.totalCount = totalCount;
+        }
+
+        public List<ChangesetBeen> getChangesets() {
+            return changesets;
+        }
+
+        public int getTotalCount() {
+            return totalCount;
+        }
+
+        public int getTotalPages() {
+            if (totalCount <= 0) return 1;
+            return (totalCount + Config.OSMCHA_PAGE_SIZE - 1) / Config.OSMCHA_PAGE_SIZE;
+        }
+    }
+
+    /**
+     * Fetch changesets from OSMCha API for a given bbox
+     * @param bbox The bounding box (minLon,minLat,maxLon,maxLat)
+     * @param page The page number (1-based)
+     * @return The result with changeset list and total count
+     */
+    public static OsmchaResult fetchChangesetsFromOsmcha(String bbox, int page) {
+        List<ChangesetBeen> result = new ArrayList<>();
+        int totalCount = 0;
+        try {
+            String url = Config.getOsmchaChangesetsUrl(bbox, page);
+            Logging.info("Fetching changesets from OSMCha: " + url);
+            String token = Config.getPlatform().getOsmchaToken();
+            String json = token.isEmpty() ? Request.sendGET(url) : Request.sendGETWithAuth(url, token);
+            if (json == null) {
+                return new OsmchaResult(result, 0);
+            }
+            try (JsonReader jsonReader = Json.createReader(new StringReader(json))) {
+                JsonObject root = jsonReader.readObject();
+                totalCount = root.getInt("count", 0);
+                JsonArray features = root.getJsonArray("features");
+                for (JsonValue value : features) {
+                    JsonObject feature = value.asJsonObject();
+                    ChangesetBeen cs = new ChangesetBeen();
+                    cs.setChangesetId(feature.getInt("id"));
+                    JsonObject props = feature.getJsonObject("properties");
+                    cs.setUser(props.getString("user", ""));
+                    cs.setCreate(props.getInt("create", 0));
+                    cs.setModify(props.getInt("modify", 0));
+                    cs.setDelete(props.getInt("delete", 0));
+                    cs.setDate(props.getString("date", ""));
+                    result.add(cs);
+                }
+            }
+        } catch (Exception ex) {
+            Logging.warn("Could not fetch from OSMCha: " + ex.getMessage());
+        }
+        return new OsmchaResult(result, totalCount);
     }
 
     /**

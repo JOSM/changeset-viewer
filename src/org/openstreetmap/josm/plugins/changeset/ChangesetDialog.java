@@ -7,9 +7,7 @@ import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Future;
 
 import javax.swing.AbstractAction;
@@ -32,6 +30,7 @@ import org.openstreetmap.josm.gui.widgets.JosmTextField;
 import org.openstreetmap.josm.plugins.changeset.util.CellRenderer;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetBeen;
 import org.openstreetmap.josm.plugins.changeset.util.ChangesetController;
+import org.openstreetmap.josm.plugins.changeset.util.ChangesetController.OsmchaResult;
 import org.openstreetmap.josm.plugins.changeset.util.Config;
 import org.openstreetmap.josm.plugins.changeset.util.DataSetChangesetBuilder.BoundedChangesetDataSet;
 import org.openstreetmap.josm.tools.GBC;
@@ -55,9 +54,11 @@ public final class ChangesetDialog extends ToggleDialog {
     private final JButton jButtonNext = new JButton(">");
     private final JLabel pageLabel = new JLabel("", SwingConstants.CENTER);
 
-    private List<ChangesetBeen> allChangesets = new ArrayList<>();
-    private int currentPage;
     private boolean updatingComboBox;
+    private int currentPage = 1;
+    private int totalPages = 1;
+    private int totalCount;
+    private String currentBbox = "";
 
     /**
      * Create a new {@link ChangesetDialog} object
@@ -76,9 +77,9 @@ public final class ChangesetDialog extends ToggleDialog {
         platformSelector.addActionListener(e -> Config.setPlatform((Config.Platform) platformSelector.getSelectedItem()));
         jPanelProjects.add(platformSelector, GBC.eol().fill(GBC.HORIZONTAL));
 
-        // "Get changesets" button
-        JButton jButtonGetChangesets = new JButton(tr("Get changesets in the area"));
-        jPanelProjects.add(jButtonGetChangesets, GBC.eol().fill(GBC.HORIZONTAL));
+        // "Get changesets from OSMCha" button
+        JButton jButtonOsmcha = new JButton(tr("Get changesets in the area"));
+        jPanelProjects.add(jButtonOsmcha, GBC.eol().fill(GBC.HORIZONTAL));
 
         // Progress bar
         progressBar.setVisible(false);
@@ -89,7 +90,7 @@ public final class ChangesetDialog extends ToggleDialog {
         jComboBox.setRenderer(renderer);
         jPanelProjects.add(jComboBox, GBC.eol().fill(GBC.HORIZONTAL));
 
-        // Pagination row: < Page x/y >
+        // Pagination row: < Page x/y (total) >
         JPanel pageRow = new JPanel(new GridBagLayout());
         jButtonPrev.setEnabled(false);
         jButtonNext.setEnabled(false);
@@ -106,7 +107,24 @@ public final class ChangesetDialog extends ToggleDialog {
 
         // --- Listeners ---
 
-        jButtonGetChangesets.addActionListener(e -> getChangesets());
+        jButtonOsmcha.addActionListener(e -> {
+            currentPage = 1;
+            fetchOsmchaPage();
+        });
+
+        jButtonPrev.addActionListener(e -> {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchOsmchaPage();
+            }
+        });
+
+        jButtonNext.addActionListener(e -> {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchOsmchaPage();
+            }
+        });
 
         jComboBox.addActionListener(e -> {
             if (!updatingComboBox) {
@@ -116,9 +134,6 @@ public final class ChangesetDialog extends ToggleDialog {
                 }
             }
         });
-
-        jButtonPrev.addActionListener(e -> navigatePage(-1));
-        jButtonNext.addActionListener(e -> navigatePage(1));
 
         // Side buttons
         SideButton displayChangesetButton = new SideButton(new AbstractAction() {
@@ -156,102 +171,61 @@ public final class ChangesetDialog extends ToggleDialog {
         createLayout(jPanelProjects, false, Arrays.asList(displayChangesetButton, openChangesetweb));
     }
 
-    private synchronized void getChangesets() {
+    private synchronized void fetchOsmchaPage() {
         if (this.buttonUpdater != null) {
             this.buttonUpdater.cancel(true);
         }
-        // Capture bbox on EDT before submitting to worker
-        Bounds bounds = MainApplication.getMap().mapView.getRealBounds();
-        String bbox = bounds.getMinLon() + "," + bounds.getMinLat() + "," + bounds.getMaxLon() + "," + bounds.getMaxLat();
+        if (currentPage == 1) {
+            Bounds bounds = MainApplication.getMap().mapView.getRealBounds();
+            currentBbox = bounds.getMinLon() + "," + bounds.getMinLat() + "," + bounds.getMaxLon() + "," + bounds.getMaxLat();
+        }
         progressBar.setVisible(true);
         jComboBox.setVisible(false);
         updatingComboBox = true;
         jComboBox.removeAllItems();
         updatingComboBox = false;
         jComboBox.setEnabled(false);
-        currentPage = 0;
-        this.buttonUpdater = MainApplication.worker.submit(() -> asyncChangesets(bbox));
-    }
-
-    private void asyncChangesets(String bbox) {
-        try {
-            if (Config.getPlatform() == Config.Platform.OSM) {
-                allChangesets = ChangesetController.collectChangesetIds();
-                if (!allChangesets.isEmpty()) {
-                    ChangesetController.fetchStatsForPage(allChangesets, 0);
-                }
-            } else {
-                allChangesets = ChangesetController.fetchChangesetsFromApi(bbox);
-            }
-            GuiHelper.runInEDT(() -> {
-                updatingComboBox = true;
-                jComboBox.removeAllItems();
-                int to = Math.min(ChangesetController.PAGE_SIZE, allChangesets.size());
-                for (int i = 0; i < to; i++) {
-                    jComboBox.addItem(allChangesets.get(i));
-                }
-                updatingComboBox = false;
-                jComboBox.setEnabled(true);
-                progressBar.setVisible(false);
-                jComboBox.setVisible(true);
-                updatePageControls();
-            });
-        } finally {
-            GuiHelper.runInEDT(() -> {
-                progressBar.setVisible(false);
-                jComboBox.setVisible(true);
-            });
-        }
-    }
-
-    private void navigatePage(int delta) {
-        int totalPages = getTotalPages();
-        int newPage = currentPage + delta;
-        if (newPage < 0 || newPage >= totalPages) {
-            return;
-        }
-        currentPage = newPage;
-        progressBar.setVisible(true);
         jButtonPrev.setEnabled(false);
         jButtonNext.setEnabled(false);
-        MainApplication.worker.submit(() -> {
-            ChangesetController.fetchStatsForPage(allChangesets, currentPage);
-            GuiHelper.runInEDT(() -> {
-                updatingComboBox = true;
-                jComboBox.removeAllItems();
-                int from = currentPage * ChangesetController.PAGE_SIZE;
-                int to = Math.min(from + ChangesetController.PAGE_SIZE, allChangesets.size());
-                for (int i = from; i < to; i++) {
-                    jComboBox.addItem(allChangesets.get(i));
-                }
-                updatingComboBox = false;
-                progressBar.setVisible(false);
-                updatePageControls();
-            });
+        this.buttonUpdater = MainApplication.worker.submit(() -> {
+            try {
+                OsmchaResult result = ChangesetController.fetchChangesetsFromOsmcha(currentBbox, currentPage);
+                GuiHelper.runInEDT(() -> {
+                    totalCount = result.getTotalCount();
+                    totalPages = result.getTotalPages();
+                    updatingComboBox = true;
+                    jComboBox.removeAllItems();
+                    for (ChangesetBeen cs : result.getChangesets()) {
+                        jComboBox.addItem(cs);
+                    }
+                    updatingComboBox = false;
+                    jComboBox.setEnabled(true);
+                    progressBar.setVisible(false);
+                    jComboBox.setVisible(true);
+                    updatePageControls();
+                });
+            } finally {
+                GuiHelper.runInEDT(() -> {
+                    progressBar.setVisible(false);
+                    jComboBox.setVisible(true);
+                });
+            }
         });
     }
 
-    private int getTotalPages() {
-        if (allChangesets.isEmpty()) {
-            return 1;
-        }
-        return (allChangesets.size() + ChangesetController.PAGE_SIZE - 1) / ChangesetController.PAGE_SIZE;
-    }
-
     private void updatePageControls() {
-        int totalPages = getTotalPages();
-        if (allChangesets.isEmpty()) {
+        if (totalCount == 0) {
             pageLabel.setText(tr("No changesets found"));
             jButtonPrev.setEnabled(false);
             jButtonNext.setEnabled(false);
         } else if (totalPages <= 1) {
-            pageLabel.setText(allChangesets.size() + " changesets");
+            pageLabel.setText(totalCount + " changesets");
             jButtonPrev.setEnabled(false);
             jButtonNext.setEnabled(false);
         } else {
-            pageLabel.setText(tr("Page {0} / {1} ({2} total)", currentPage + 1, totalPages, allChangesets.size()));
-            jButtonPrev.setEnabled(currentPage > 0);
-            jButtonNext.setEnabled(currentPage < totalPages - 1);
+            pageLabel.setText(tr("Page {0} / {1} ({2} total)", currentPage, totalPages, totalCount));
+            jButtonPrev.setEnabled(currentPage > 1);
+            jButtonNext.setEnabled(currentPage < totalPages);
         }
     }
 
@@ -272,6 +246,13 @@ public final class ChangesetDialog extends ToggleDialog {
                     } else {
                         Changeset.work(boundedDataSet, changesetId);
                     }
+                });
+            } catch (java.net.SocketTimeoutException ex) {
+                Logging.warn("Timeout fetching changeset " + changesetId + ": " + ex.getMessage());
+                GuiHelper.runInEDT(() -> {
+                    progressBar.setVisible(false);
+                    JOptionPane.showMessageDialog(MainApplication.getMainFrame(),
+                            tr("The request timed out. The changeset may be too old or too large for the Overpass API. Try again later."));
                 });
             } catch (IOException ex) {
                 Logging.warn(ex.getMessage());

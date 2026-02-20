@@ -8,9 +8,12 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.GeneralPath;
+import java.util.Collection;
 import java.util.List;
 
 import javax.swing.Action;
@@ -44,6 +47,10 @@ public class ChangesetLayer extends Layer implements ActionListener {
             marktr("changeset-viewer"), marktr("Modified objects (old)"), new Color(214, 138, 13)).cached();
     private static final CachingProperty<Color> MODIFIED_NEW = new NamedColorProperty(NamedColorProperty.COLOR_CATEGORY_GENERAL,
             marktr("changeset-viewer"), marktr("Modified objects (new)"), new Color(229, 228, 61)).cached();
+
+    private static final BasicStroke DEFAULT_STROKE = new BasicStroke(2f);
+    private static final BasicStroke DASHED_STROKE = new BasicStroke(1.0f,
+            BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10.0f, new float[]{10.0f}, 0.0f);
 
     BoundedChangesetDataSet dataSet;
 
@@ -82,116 +89,109 @@ public class ChangesetLayer extends Layer implements ActionListener {
     @Override
     public void paint(Graphics2D g, final MapView mv, Bounds bounds) {
         DataSet data = dataSet.getDataSet();
-        Stroke stroke = g.getStroke();
         if (data == null) {
             return;
         }
-        //Print the objects
-        final float[] dash1 = {10.0f};
-        final BasicStroke defaultStroke = new BasicStroke(2f);
-        for (Way way : data.searchWays(bounds.toBBox())) {
-            g.setStroke(defaultStroke);
-            final String action = way.get("action");
-            paintWay(g, mv, dash1, way, action);
-        }
-        for (Node node : data.searchNodes(bounds.toBBox())) {
-            g.setStroke(defaultStroke);
-            final String action = node.get("action");
-            paintNode(g, mv, node, action);
-        }
-        g.setStroke(stroke);
-    }
+        Stroke originalStroke = g.getStroke();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-    private static void paintWay(Graphics2D g, MapView mv, float[] dash1, Way way, String action) {
-        switch (action) {
-            case "create":
-                g.setColor(CREATED_COLOR.get());
-                break;
-            case "delete":
-                g.setColor(DELETED_COLOR.get());
-                break;
-            case "modify-old":
-                g.setColor(MODIFIED_OLD.get());
-                break;
-            case "modify-new":
-                g.setColor(MODIFIED_NEW.get());
-                break;
-            case "modify-new-rel":
-            case "modify-old-rel":
-            case "create-rel":
-            case "delete-rel":
-                setRelationColor(g, action);
-                g.setStroke(new BasicStroke(1.0f,
-                        BasicStroke.CAP_BUTT,
-                        BasicStroke.JOIN_ROUND,
-                        10.0f, dash1, 0.0f));
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown action: " + action);
-        }
-        List<Node> nodes = way.getNodes();
-        if (nodes.size() < 2) {
-            return;
-        }
-        // We cannot use MapViewPath
-        Point previous = null;
-        for (Node node : way.getNodes()) {
-            final boolean latLonKnown = node.isLatLonKnown();
-            if (previous == null && latLonKnown) {
-                previous = mv.getPoint(node);
-                continue;
-            } else if (previous != null && !latLonKnown) {
-                previous = null;
-                continue;
-            }
-            if (latLonKnown) {
-                Point point = mv.getPoint(node);
-                g.drawLine(previous.x, previous.y, point.x, point.y);
-                previous = point;
-            }
-        }
-    }
+        // Resolve colors once per paint call
+        Color createColor = CREATED_COLOR.get();
+        Color deleteColor = DELETED_COLOR.get();
+        Color modOldColor = MODIFIED_OLD.get();
+        Color modNewColor = MODIFIED_NEW.get();
 
-    private static void setRelationColor(Graphics2D g, String action) {
-        switch (action) {
-            case "modify-new-rel":
-                g.setColor(MODIFIED_NEW.get());
-                break;
-            case "modify-old-rel":
-                g.setColor(MODIFIED_OLD.get());
-                break;
-            case "create-rel":
-                g.setColor(CREATED_COLOR.get());
-                break;
-            case "delete-rel":
-                g.setColor(DELETED_COLOR.get());
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown action: " + action);
-        }
-    }
+        // Batch ways by action into GeneralPaths
+        GeneralPath createPath = new GeneralPath();
+        GeneralPath deletePath = new GeneralPath();
+        GeneralPath modOldPath = new GeneralPath();
+        GeneralPath modNewPath = new GeneralPath();
+        GeneralPath createRelPath = new GeneralPath();
+        GeneralPath deleteRelPath = new GeneralPath();
+        GeneralPath modOldRelPath = new GeneralPath();
+        GeneralPath modNewRelPath = new GeneralPath();
 
-    private static void paintNode(Graphics2D g, MapView mv, Node node, String action) {
-        if (!node.referrers(Way.class).findAny().isPresent()) {
+        Collection<Way> ways = data.searchWays(bounds.toBBox());
+        for (Way way : ways) {
+            String action = way.get("action");
+            if (action == null) continue;
+            List<Node> nodes = way.getNodes();
+            if (nodes.size() < 2) continue;
+
+            GeneralPath target;
             switch (action) {
-                case "create":
-                    g.setColor(CREATED_COLOR.get());
-                    break;
-                case "delete":
-                    g.setColor(DELETED_COLOR.get());
-                    break;
-                case "modify-old":
-                    g.setColor(MODIFIED_OLD.get());
-                    break;
-                case "modify-new":
-                    g.setColor(MODIFIED_NEW.get());
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown action: " + action);
+                case "create": target = createPath; break;
+                case "delete": target = deletePath; break;
+                case "modify-old": target = modOldPath; break;
+                case "modify-new": target = modNewPath; break;
+                case "create-rel": target = createRelPath; break;
+                case "delete-rel": target = deleteRelPath; break;
+                case "modify-old-rel": target = modOldRelPath; break;
+                case "modify-new-rel": target = modNewRelPath; break;
+                default: continue;
             }
+            appendWayToPath(target, mv, nodes);
+        }
 
+        // Draw all solid ways
+        g.setStroke(DEFAULT_STROKE);
+        drawPath(g, createPath, createColor);
+        drawPath(g, deletePath, deleteColor);
+        drawPath(g, modOldPath, modOldColor);
+        drawPath(g, modNewPath, modNewColor);
+
+        // Draw all relation (dashed) ways
+        g.setStroke(DASHED_STROKE);
+        drawPath(g, createRelPath, createColor);
+        drawPath(g, deleteRelPath, deleteColor);
+        drawPath(g, modOldRelPath, modOldColor);
+        drawPath(g, modNewRelPath, modNewColor);
+
+        // Draw standalone nodes
+        g.setStroke(DEFAULT_STROKE);
+        for (Node node : data.searchNodes(bounds.toBBox())) {
+            if (node.referrers(Way.class).findAny().isPresent()) {
+                continue;
+            }
+            String action = node.get("action");
+            if (action == null) continue;
+            Color c;
+            switch (action) {
+                case "create": c = createColor; break;
+                case "delete": c = deleteColor; break;
+                case "modify-old": c = modOldColor; break;
+                case "modify-new": c = modNewColor; break;
+                default: continue;
+            }
+            g.setColor(c);
             Point pnt = mv.getPoint(node);
-            g.fillOval(pnt.x, pnt.y, 7, 7);
+            g.fillOval(pnt.x - 3, pnt.y - 3, 7, 7);
+        }
+
+        g.setStroke(originalStroke);
+    }
+
+    private static void appendWayToPath(GeneralPath path, MapView mv, List<Node> nodes) {
+        boolean started = false;
+        for (Node node : nodes) {
+            if (!node.isLatLonKnown()) {
+                started = false;
+                continue;
+            }
+            Point p = mv.getPoint(node);
+            if (!started) {
+                path.moveTo(p.x, p.y);
+                started = true;
+            } else {
+                path.lineTo(p.x, p.y);
+            }
+        }
+    }
+
+    private static void drawPath(Graphics2D g, GeneralPath path, Color color) {
+        if (path.getCurrentPoint() != null) {
+            g.setColor(color);
+            g.draw(path);
         }
     }
 
